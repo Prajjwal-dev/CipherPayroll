@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 #include <windows.h>
 #include <conio.h>
 
@@ -9,6 +8,7 @@
 #define USERNAMELENGTH 50
 #define PASSWORDLENGTH 50
 #define UIDLENGTH 10
+#define EMPLOYEE_FILE "Employees.bin"
 #define FILENAME "Login.txt"
 
 #define RESET 7
@@ -18,29 +18,34 @@
 #define BLUE (FOREGROUND_BLUE)
 #define CYAN (FOREGROUND_GREEN | FOREGROUND_BLUE)
 
+// Define the User structure
 struct User {
+    int uid;
     char username[USERNAMELENGTH];
     char password[PASSWORDLENGTH];
-    char uid[UIDLENGTH];
-};
-
-// Structure to hold personal details
-struct personal_details {
-    unsigned long long int contact_no;
-    char email[100];
+    char status; // 'P' for Pending, 'A' for Approved
 };
 
 struct Employee {
     char username[USERNAMELENGTH];
     char password[PASSWORDLENGTH];
-    char uid[UIDLENGTH];
+    int uid;
     double salary;
     char status; // 'A' for Active, 'I' for Inactive, 'T' for Termination
+    char position[USERNAMELENGTH];
+    unsigned long long int contact_no;
+    char email[100];
+};
+
+struct personal_details {
+	unsigned long long int contact_no;
+    char email[100];
 };
 
 //For client
 struct User userList[MAXUSERS];
 int currentUserCount = 0;
+int latestUID = 1;  // Starting point for UIDs
 
 //For admin
 struct Employee employeeList[MAXUSERS];
@@ -111,6 +116,7 @@ void saveUserData() {
     }
 
     fwrite(&currentUserCount, sizeof(int), 1, file);
+    fwrite(&latestUID, sizeof(int), 1, file);  // Save latest UID
     fwrite(userList, sizeof(struct User), currentUserCount, file);
     fclose(file);
 }
@@ -125,73 +131,73 @@ void loadUserData() {
     }
 
     fread(&currentUserCount, sizeof(int), 1, file);
+    fread(&latestUID, sizeof(int), 1, file);  // Load latest UID
     fread(userList, sizeof(struct User), currentUserCount, file);
     fclose(file);
 }
 
-void createUID(char* uid) {
-    for (int i = 0; i < UIDLENGTH - 1; i++) {
-        uid[i] = '0' + rand() % 10;
+void saveEmployeeData() {
+    FILE *file = fopen(EMPLOYEE_FILE, "wb");
+    if (file == NULL) {
+        setColor(RED);
+        printf("Error: Cannot open employee file for writing!\n");
+        setColor(RESET);
+        return;
     }
-    uid[UIDLENGTH - 1] = '\0';
+
+    fwrite(&currentEmployeeCount, sizeof(int), 1, file);
+    fwrite(employeeList, sizeof(struct Employee), currentEmployeeCount, file);
+    fclose(file);
 }
 
-void registerNewUser() {
-    if (currentUserCount >= MAXUSERS) {
+void loadEmployeeData() {
+    FILE *file = fopen(EMPLOYEE_FILE, "rb");
+    if (file == NULL) {
         setColor(RED);
-        printf("Error: Maximum user limit reached!\n");
+        printf("Error: Cannot open employee file for reading!\n");
         setColor(RESET);
         return;
     }
 
-    char username[USERNAMELENGTH], password[PASSWORDLENGTH], reenterPassword[PASSWORDLENGTH], uid[UIDLENGTH];
-    setColor(CYAN);
-    printf("Enter a username: ");
+    fread(&currentEmployeeCount, sizeof(int), 1, file);
+    fread(employeeList, sizeof(struct Employee), currentEmployeeCount, file);
+    fclose(file);
+}
+
+void createUID(int* uid) {
+    *uid = latestUID++;
+}
+
+void registerUser() {
+    setColor(BLUE);
+    printf("\nRegister New User\n=========================\n");
     setColor(RESET);
-    getchar(); // Clear newline left by previous input
-    fgets(username, USERNAMELENGTH, stdin);
-    username[strcspn(username, "\n")] = 0;
 
-    setColor(CYAN);
-    printf("Enter a password: ");
-    setColor(RESET);
-    getPasswordInput(password);
-    printf("\n");
-
-    setColor(CYAN);
-    printf("Re-enter your password: ");
-    setColor(RESET);
-    getPasswordInput(reenterPassword);
-    printf("\n");
-
-    if (strcmp(password, reenterPassword) != 0) {
-        setColor(RED);
-        printf("Error: Passwords do not match!\n");
-        setColor(RESET);
-        return;
-    }
-
-    for (int i = 0; i < currentUserCount; i++) {
-        if (strcmp(userList[i].username, username) == 0) {
-            setColor(RED);
-            printf("Error: Username already taken!\n");
-            setColor(RESET);
-            return;
-        }
-    }
-
-    createUID(uid);
     struct User newUser;
-    strcpy(newUser.username, username);
-    strcpy(newUser.password, password);
-    strcpy(newUser.uid, uid);
+    newUser.status = 'P'; // Pending approval
 
-    userList[currentUserCount] = newUser;
-    currentUserCount++;
+    createUID(&newUser.uid);  // Automatically generate a sequential UID
+
+    setColor(CYAN);
+    printf("Generated UID: %d\n", newUser.uid);
+    setColor(CYAN);
+    printf("Enter Username: ");
+    setColor(RESET);
+    fflush(stdin);
+    fgets(newUser.username, USERNAMELENGTH, stdin);
+    newUser.username[strcspn(newUser.username, "\n")] = '\0';
+
+    setColor(CYAN);
+    printf("Enter Password: ");
+    setColor(RESET);
+    getPasswordInput(newUser.password);
+    printf("\n");
+
+    userList[currentUserCount++] = newUser;
     saveUserData();
 
     setColor(GREEN);
-    printf("Success: Registration complete! Your UID is %s\n and Your Password is %s\nCaution: Keep your Password note down and safe!\n", uid, password);
+    printf("Registration successful! Please wait for admin approval.\n");
     setColor(RESET);
 }
 
@@ -253,13 +259,12 @@ void addPersonalDetails() {
 }
 
 void updatePassword() {
-    char username[USERNAMELENGTH], oldPassword[PASSWORDLENGTH], newPassword[PASSWORDLENGTH], reenterPassword[PASSWORDLENGTH];
+    int uid;
+    char oldPassword[PASSWORDLENGTH], newPassword[PASSWORDLENGTH], reenterPassword[PASSWORDLENGTH];
     setColor(CYAN);
-    printf("Enter your username: ");
+    printf("Enter your UID: ");
     setColor(RESET);
-    getchar();
-    fgets(username, USERNAMELENGTH, stdin);
-    username[strcspn(username, "\n")] = '\0';
+    scanf("%d", &uid);
 
     setColor(CYAN);
     printf("Enter your old password: ");
@@ -268,7 +273,7 @@ void updatePassword() {
     printf("\n");
 
     for (int i = 0; i < currentUserCount; i++) {
-        if (strcmp(userList[i].username, username) == 0 && strcmp(userList[i].password, oldPassword) == 0) {
+        if (userList[i].uid == uid && strcmp(userList[i].password, oldPassword) == 0) {
             setColor(CYAN);
             printf("Enter a new password: ");
             setColor(RESET);
@@ -292,28 +297,27 @@ void updatePassword() {
             saveUserData();
 
             setColor(GREEN);
-            printf("Password changed successfully!\nYour Password is %s\nCaution:Keep your Password note down and safe!\n", newPassword);
+            printf("Password changed successfully!\nYour Password is %s\nCaution: Keep your Password noted down and safe!\n", newPassword);
             setColor(RESET);
             return;
         }
     }
 
     setColor(RED);
-    printf("Error: Invalid username or old password!\n");
+    printf("Error: Invalid UID or old password!\n");
     setColor(RESET);
 }
 
 void resetUserPassword() {
-    char uid[UIDLENGTH], newPassword[PASSWORDLENGTH], reenterPassword[PASSWORDLENGTH];
+    int uid;
+    char newPassword[PASSWORDLENGTH], reenterPassword[PASSWORDLENGTH];
     setColor(CYAN);
     printf("Enter your UID: ");
     setColor(RESET);
-    getchar();
-    fgets(uid, UIDLENGTH, stdin);
-    uid[strcspn(uid, "\n")] = '\0';
+    scanf("%d", &uid);
 
     for (int i = 0; i < currentUserCount; i++) {
-        if (strcmp(userList[i].uid, uid) == 0) {
+        if (userList[i].uid == uid) {
             setColor(CYAN);
             printf("Enter a new password: ");
             setColor(RESET);
@@ -351,6 +355,7 @@ void resetUserPassword() {
 void clearInputBuffer() {
     while (getchar() != '\n');
 }
+
 void clientMenu() {
     int option;
 
@@ -389,15 +394,13 @@ void clientMenu() {
 }
 
 int authenticateUser() {
-    char username[USERNAMELENGTH], password[PASSWORDLENGTH];
+    int uid;
+    char password[PASSWORDLENGTH];
     setColor(CYAN);
-    printf("Enter your username: ");
+    printf("Enter your UID: ");
     setColor(RESET);
-
-    getchar(); // Clear newline left by previous input
-    fgets(username, USERNAMELENGTH, stdin);
-    username[strcspn(username, "\n")] = 0;  // Remove trailing newline character
-
+    fflush(stdin);
+    scanf("%d", &uid);
     setColor(CYAN);
     printf("Enter your password: ");
     setColor(RESET);
@@ -405,18 +408,25 @@ int authenticateUser() {
     printf("\n");
 
     for (int i = 0; i < currentUserCount; i++) {
-        if (strcmp(userList[i].username, username) == 0 && strcmp(userList[i].password, password) == 0) {
-            setColor(GREEN);
-            printf("Login successful!\n");
-            printf("Welcome, %s!\n", userList[i].username);
-            setColor(RESET);
-            clientMenu();  // Go to client menu after successful login
-            return 1;
+        if (userList[i].uid == uid && strcmp(userList[i].password, password) == 0) {
+            if (userList[i].status == 'A') {
+                setColor(GREEN);
+                printf("Login successful!\n");
+                printf("Welcome, %s!\n", userList[i].username);
+                setColor(RESET);
+                clientMenu();  // Go to client menu after successful login
+                return 1;
+            } else {
+                setColor(RED);
+                printf("Error: Your account is not approved yet. Please wait for admin approval.\n");
+                setColor(RESET);
+                return 0;
+            }
         }
     }
 
     setColor(RED);
-    printf("Error: Invalid username or password!\n");
+    printf("Error: Invalid UID or password!\n");
     setColor(RESET);
     return 0;
 }
@@ -450,7 +460,7 @@ void mainclientMenu() {
                 setColor(RESET);
                 setColor(CYAN);
                 printf("1. Register\n");
-                registerNewUser();
+                registerUser();
                 setColor(CYAN);
                 printf("Do you want to continue (Y/N): ");
                 scanf(" %c", &check);
@@ -524,7 +534,6 @@ void mainclientMenu() {
     }
 }
 
-//Admin Section
 void saveAdminPassword(const char* password) {
     FILE* file = fopen("AdminPassword.txt", "w");
     if (file == NULL) {
@@ -684,84 +693,274 @@ void adminChangeAdminPassword() {
     }
 }
 
-void adminApproveNewEmployee() {
-    // Load data from Login.txt
-    FILE *file = fopen(FILENAME, "r");
-    if (file == NULL) {
-        setColor(RED);
-        printf("Error: Cannot open %s for reading!\n", FILENAME);
-        setColor(RESET);
-        return;
-    }
-
-    // Read all users from file and display those pending approval
-    struct User tempUser;
-    printf("List of Pending Registrations:\n");
-    while (fread(&tempUser, sizeof(struct User), 1, file)) {
-        // Check if user status is pending (you may need a status field in struct User)
-        // Display only pending users
-        // Example: if (tempUser.status == 'P') { printf("%s\n", tempUser.username); }
-    }
-
-    fclose(file);
-
-    // Prompt admin for UID to approve
-    char uid[UIDLENGTH];
-    printf("Enter UID of user to approve: ");
-    scanf("%s", uid);
-
-    // Find user in userList array
+// Check user approval status
+int checkUserApprovalStatus(int uid, char* password) {
     for (int i = 0; i < currentUserCount; i++) {
-        if (strcmp(userList[i].uid, uid) == 0) {
-            // Change user status to Active ('A') or set status field accordingly
-            // Example: userList[i].status = 'A';
-            // Update user in Login.txt (fwrite or update function)
-            break;
+        if (userList[i].uid == uid && strcmp(userList[i].password, password) == 0) {
+            return userList[i].status == 'A'; // Return 1 if approved, 0 otherwise
+        }
+    }
+    return -1; // User not found
+}
+
+void adminApproveNewEmployee() {
+    setColor(BLUE);
+    printf("\nApproval for New Employee\n=========================\n");
+    setColor(RESET);
+
+    for (int i = 0; i < currentUserCount; i++) {
+        if (userList[i].status == 'P') {
+            printf("UID: %d, Username: %s\n", userList[i].uid, userList[i].username);
         }
     }
 
-    setColor(GREEN);
-    printf("User with UID %s approved successfully!\n", uid);
+    int uid;
+    setColor(CYAN);
+    printf("Enter UID of the employee to approve: ");
+    setColor(RESET);
+    scanf("%d", &uid);
+
+    for (int i = 0; i < currentUserCount; i++) {
+        if (userList[i].uid == uid && userList[i].status == 'P') {
+            userList[i].status = 'A'; // Set status to Approved
+
+            struct Employee newEmployee;
+            strcpy(newEmployee.username, userList[i].username);
+            strcpy(newEmployee.password, userList[i].password);
+            newEmployee.uid = userList[i].uid;
+            newEmployee.salary = 0.0; // Set initial salary to 0
+            newEmployee.status = 'A'; // Set status to Active
+            strcpy(newEmployee.position, "Not Assigned"); // Set initial position
+            newEmployee.contact_no = 0; // Initial contact number
+            strcpy(newEmployee.email, ""); // Initial email
+
+            employeeList[currentEmployeeCount++] = newEmployee;
+
+            setColor(GREEN);
+            printf("Employee approved successfully!\n");
+            printf("UID: %d\n", newEmployee.uid);
+            printf("Password: %s\n", newEmployee.password);
+            setColor(RESET);
+
+            saveUserData();
+            saveEmployeeData();
+            return;
+        }
+    }
+
+    setColor(RED);
+    printf("Error: UID not found or already approved!\n");
     setColor(RESET);
 }
 
 void adminEditEmployeeDetails() {
-    // Implementation to edit employee details like personal details, username, password, etc.
-    // You can use similar techniques as in other functions (load data, modify, save data)
-}
+    int uid, option;
+    setColor(BLUE);
+    printf("\nEdit Employee Details\n=========================\n");
+    setColor(RESET);
 
-void adminViewAllEmployeeDetails() {
-    // Load and display all employee details from Login.txt
-    printf("List of All Employee Details:\n");
-    for (int i = 0; i < currentUserCount; i++) {
-        // Display each employee's details (username, UID, status, etc.)
-    }
-}
+    setColor(CYAN);
+    printf("Enter UID of the employee to edit: ");
+    setColor(RESET);
+    scanf("%d", &uid);
 
-void adminChangeEmployeeStatus() {
-    // Prompt for UID and change employee status
-    char uid[UIDLENGTH];
-    printf("Enter UID of employee: ");
-    scanf("%s", uid);
-
-    // Find employee in employeeList array
     for (int i = 0; i < currentEmployeeCount; i++) {
-        if (strcmp(employeeList[i].uid, uid) == 0) {
-            // Prompt for and update employee status ('A', 'I', 'T')
-            // Example: employeeList[i].status = 'I';
-            // Save employeeList to file (fwrite or update function)
-            break;
+        if (employeeList[i].uid == uid) {
+            while (1) {
+                setColor(CYAN);
+                printf("\nWhat would you like to edit?\n");
+                printf("1. Username\n");
+                printf("2. Password\n");
+                printf("3. Salary\n");
+                printf("4. Position\n");
+                printf("5. Personal Details\n");
+                printf("6. Go back\n");
+                setColor(GREEN);
+                printf("Enter your choice: ");
+                setColor(RESET);
+                scanf("%d", &option);
+
+                switch (option) {
+                    case 1:
+                        setColor(CYAN);
+                        printf("Enter new username: ");
+                        setColor(RESET);
+                        getchar();
+                        fgets(employeeList[i].username, USERNAMELENGTH, stdin);
+                        employeeList[i].username[strcspn(employeeList[i].username, "\n")] = '\0';
+                        break;
+                    case 2:
+                        setColor(CYAN);
+                        printf("Enter new password: ");
+                        setColor(RESET);
+                        getPasswordInput(employeeList[i].password);
+                        printf("\n");
+                        break;
+                    case 3:
+                        setColor(CYAN);
+                        printf("Enter new salary: ");
+                        setColor(RESET);
+                        scanf("%lf", &employeeList[i].salary);
+                        break;
+                    case 4:
+                        setColor(CYAN);
+                        printf("Enter new position: ");
+                        setColor(RESET);
+                        getchar();
+                        fgets(employeeList[i].position, USERNAMELENGTH, stdin);
+                        employeeList[i].position[strcspn(employeeList[i].position, "\n")] = '\0';
+                        break;
+                    case 5:
+                        setColor(CYAN);
+                        printf("Enter new contact number (10 digits only): ");
+                        setColor(RESET);
+                        scanf("%llu", &employeeList[i].contact_no);
+                        setColor(CYAN);
+                        printf("Enter new email address: ");
+                        setColor(RESET);
+                        scanf("%s", employeeList[i].email);
+                        break;
+                    case 6:
+                        saveEmployeeData();
+                        setColor(GREEN);
+                        printf("Employee details updated successfully!\n");
+                        setColor(RESET);
+                        return;
+                    default:
+                        setColor(RED);
+                        printf("Error: Invalid option!\n");
+                        setColor(RESET);
+                        break;
+                }
+            }
         }
     }
 
-    setColor(GREEN);
-    printf("Employee status changed successfully!\n");
+    setColor(RED);
+    printf("Error: UID not found!\n");
     setColor(RESET);
+}
+
+void adminDeleteEmployeeRecord() {
+    int uid;
+    setColor(BLUE);
+    printf("\nDelete Employee Record\n=========================\n");
+    setColor(RESET);
+
+    setColor(CYAN);
+    printf("Enter UID of the employee to delete: ");
+    setColor(RESET);
+    scanf("%d", &uid);
+
+    for (int i = 0; i < currentEmployeeCount; i++) {
+        if (employeeList[i].uid == uid) {
+            for (int j = i; j < currentEmployeeCount - 1; j++) {
+                employeeList[j] = employeeList[j + 1];
+            }
+            currentEmployeeCount--;
+            saveEmployeeData();
+
+            setColor(GREEN);
+            printf("Employee record deleted successfully!\n");
+            setColor(RESET);
+            return;
+        }
+    }
+
+    setColor(RED);
+    printf("Error: UID not found!\n");
+    setColor(RESET);
+}
+
+void adminSearchEmployeeRecord() {
+    int uid;
+    setColor(BLUE);
+    printf("\nSearch Employee Record\n=========================\n");
+    setColor(RESET);
+
+    setColor(CYAN);
+    printf("Enter UID of the employee to search: ");
+    setColor(RESET);
+    scanf("%d", &uid);
+
+    for (int i = 0; i < currentEmployeeCount; i++) {
+        if (employeeList[i].uid == uid) {
+            setColor(GREEN);
+            printf("\nEmployee Details\n=========================\n");
+            printf("UID: %d\n", employeeList[i].uid);
+            printf("Username: %s\n", employeeList[i].username);
+            printf("Salary: %.2f\n", employeeList[i].salary);
+            printf("Position: %s\n", employeeList[i].position);
+            printf("Status: %c\n", employeeList[i].status);
+            printf("Contact No: %llu\n", employeeList[i].contact_no);
+            printf("Email: %s\n", employeeList[i].email);
+            setColor(RESET);
+            return;
+        }
+    }
+
+    setColor(RED);
+    printf("Error: UID not found!\n");
+    setColor(RESET);
+}
+
+void adminChangeEmployeeStatus() {
+    int uid;
+    char status;
+    setColor(BLUE);
+    printf("\nChange Employee Status\n=========================\n");
+    setColor(RESET);
+
+    setColor(CYAN);
+    printf("Enter UID of employee: ");
+    setColor(RESET);
+    scanf("%d", &uid);
+
+    for (int i = 0; i < currentEmployeeCount; i++) {
+        if (employeeList[i].uid == uid) {
+            setColor(CYAN);
+            printf("Enter new status (A for Active, I for Inactive, T for Terminated): ");
+            setColor(RESET);
+            getchar();
+            status = getchar();
+
+            if (status == 'A' || status == 'I') {
+                employeeList[i].status = status;
+                saveEmployeeData();
+                setColor(GREEN);
+                printf("Employee status changed successfully!\n");
+                setColor(RESET);
+            } else if (status == 'T') {
+                adminDeleteEmployeeRecord();
+            } else {
+                setColor(RED);
+                printf("Error: Invalid status!\n");
+                setColor(RESET);
+            }
+            return;
+        }
+    }
+
+    setColor(RED);
+    printf("Error: UID not found!\n");
+    setColor(RESET);
+}
+
+void adminViewAllEmployeeDetails() {
+    setColor(BLUE);
+    printf("\nAll Employee Details\n=========================\n");
+    setColor(RESET);
+
+    for (int i = 0; i < currentEmployeeCount; i++) {
+        printf("UID: %d, Username: %s, Salary: %.2f, Position: %s, Status: %c, Contact No: %llu, Email: %s\n",
+            employeeList[i].uid, employeeList[i].username, employeeList[i].salary, employeeList[i].position,
+            employeeList[i].status, employeeList[i].contact_no, employeeList[i].email);
+    }
 }
 
 void adminEmployeeInfoManagement() {
     int option;
-
+	char check;
     while (1) {
         displayLoading();
         setColor(BLUE);
@@ -772,7 +971,9 @@ void adminEmployeeInfoManagement() {
         printf("2. Edit Employee Details\n");
         printf("3. View All Employee Details\n");
         printf("4. Change Employee Status\n");
-        printf("5. Back to Admin Menu\n");
+        printf("5. Delete Employee Record\n");
+        printf("6. Search Employee Record\n");
+        printf("7. Back to Admin Menu\n");
         printf("=========================\n");
         setColor(GREEN);
         printf("Enter your choice: ");
@@ -781,17 +982,89 @@ void adminEmployeeInfoManagement() {
         switch (option) {
             case 1:
                 adminApproveNewEmployee();
+                fflush(stdin);
+                setColor(GREEN);
+                printf("Do you want to continue(Y/N): ");
+                scanf("%c", &check);
+                setColor(RESET);
+                 if (check == 'Y' || check == 'y') {
+                    break;
+                } else {
+                    displayExiting();
+                }
+                setColor(RESET);
                 break;
             case 2:
                 adminEditEmployeeDetails();
+                fflush(stdin);
+                setColor(GREEN);
+                printf("Do you want to continue(Y/N): ");
+                scanf("%c", &check);
+                setColor(RESET);
+                 if (check == 'Y' || check == 'y') {
+                    break;
+                } else {
+                    displayExiting();
+                }
+                setColor(RESET);
                 break;
             case 3:
                 adminViewAllEmployeeDetails();
+                fflush(stdin);
+                setColor(GREEN);
+                printf("Do you want to continue(Y/N): ");
+                scanf("%c", &check);
+                setColor(RESET);
+                 if (check == 'Y' || check == 'y') {
+                    break;
+                } else {
+                    displayExiting();
+                }
+                setColor(RESET);
                 break;
             case 4:
                 adminChangeEmployeeStatus();
+                fflush(stdin);
+                setColor(GREEN);
+                printf("Do you want to continue(Y/N): ");
+                scanf("%c", &check);
+                setColor(RESET);
+                 if (check == 'Y' || check == 'y') {
+                    break;
+                } else {
+                    displayExiting();
+                }
+                setColor(RESET);
                 break;
             case 5:
+                adminDeleteEmployeeRecord();
+                fflush(stdin);
+                setColor(GREEN);
+                printf("Do you want to continue(Y/N): ");
+                scanf("%c", &check);
+                setColor(RESET);
+                 if (check == 'Y' || check == 'y') {
+                    break;
+                } else {
+                    displayExiting();
+                }
+                setColor(RESET);
+                break;
+            case 6:
+                adminSearchEmployeeRecord();
+                fflush(stdin);
+                setColor(GREEN);
+                printf("Do you want to continue(Y/N): ");
+                scanf("%c", &check);
+                setColor(RESET);
+                 if (check == 'Y' || check == 'y') {
+                    break;
+                } else {
+                    displayExiting();
+                }
+                setColor(RESET);
+                break;
+            case 7:
                 return;
             default:
                 displayLoading();
@@ -828,7 +1101,6 @@ void adminMenu() {
             case 2:
                 adminChangeAdminPassword();
                 return;
-                break;
             case 3:
                 return;
             default:
@@ -842,7 +1114,7 @@ void adminMenu() {
     }
 }
 
-//For first time login of admin the password is nothing it is admin123 in format
+// For first time login of admin the password is "admin123"
 void mainMenu() {
     int option;
     char adminPassword[PASSWORDLENGTH];
@@ -904,10 +1176,9 @@ void mainMenu() {
     }
 }
 
-
 int main() {
-    srand(time(NULL));
     loadUserData();
+    loadEmployeeData();
 
     // Setup initial admin password if not already set
     if (!isInitialAdminPasswordSet()) {
@@ -918,3 +1189,4 @@ int main() {
     
     return 0;
 }
+
