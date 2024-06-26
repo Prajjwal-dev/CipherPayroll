@@ -72,9 +72,9 @@ void updatePassword();
 void resetUserPassword();
 void clearInputBuffer();
 void viewPaySlip(int uid);
-void viewTaxDeductions(int uid);
 void clientMenu(int uid);
 int authenticateUser();
+void checkApprovalNotice(int uid);
 void mainClientMenu();
 void saveAdminPassword(const char* password);
 int loadAdminPassword(char* password, int maxLength);
@@ -89,12 +89,10 @@ void adminDeleteEmployeeRecord();
 void adminSearchEmployeeRecord();
 void adminChangeEmployeeStatus();
 void adminViewAllEmployeeDetails();
-void generatePayroll();
-void calculateTaxes();
-void generateReports();
 void adminPayrollProcessing();
 void updateEmployeePayroll();
-void viewPayrollSummary();
+void viewAllEmployeePayrollSummary();
+void searchEmployeePayrollSummary();
 void displayPayrollGuideline();
 void viewPersonalInformation(int uid);
 void adminEmployeeInfoManagement();
@@ -295,8 +293,8 @@ void updatePersonalDetails() {
     // Prompt for and read contact number
     setColor(CYAN);
     printf("Enter contact number (10 digits only): ");
-    scanf("%llu", &employee->contact_no);
     setColor(RESET);
+    scanf("%llu", &employee->contact_no);
 
     // Validate contact number length
     unsigned long long int temp = employee->contact_no;
@@ -316,8 +314,8 @@ void updatePersonalDetails() {
     // Prompt for and read email address
     setColor(CYAN);
     printf("Enter email address: ");
-    scanf("%99s", employee->email);
     setColor(RESET);
+    scanf("%99s", employee->email);
 
     // Validate email format
     if (strlen(employee->email) < 10 || strcmp(employee->email + strlen(employee->email) - 10, "@gmail.com") != 0) {
@@ -330,12 +328,25 @@ void updatePersonalDetails() {
     // Prompt for and read gender
     setColor(CYAN);
     printf("Enter gender (M/F/O): ");
-    scanf("%1s", employee->gender);
     setColor(RESET);
+    scanf("%1s", employee->gender);
 
     if (strcmp(employee->gender, "M") != 0 && strcmp(employee->gender, "F") != 0 && strcmp(employee->gender, "O") != 0) {
         setColor(RED);
         printf("Error: Invalid gender input!\n");
+        setColor(RESET);
+        return;
+    }
+
+    // Prompt for and read marital status
+    setColor(CYAN);
+    printf("Enter marital status (M/S): ");
+    setColor(RESET);
+    scanf("%1s", employee->marital_status);
+
+    if (strcmp(employee->marital_status, "M") != 0 && strcmp(employee->marital_status, "S") != 0) {
+        setColor(RED);
+        printf("Error: Invalid marital status input!\n");
         setColor(RESET);
         return;
     }
@@ -345,6 +356,7 @@ void updatePersonalDetails() {
     printf("Personal details updated successfully!\n");
     setColor(RESET);
 }
+
 
 void updatePassword() {
     int uid;
@@ -473,6 +485,7 @@ void viewPersonalInformation(int uid) {
     printf("UID: %d\n", employee->uid);
     printf("Username: %s\n", employee->username);
     printf("Gender: %s\n", employee->gender);
+    printf("Marital Status: %s\n", employee->marital_status);
     printf("Position: %s\n", employee->position);
     printf("Contact No: %llu\n", employee->contact_no);
     printf("Email: %s\n", employee->email);
@@ -510,40 +523,30 @@ void viewPaySlip(int uid) {
     setColor(RESET);
 }
 
-void viewTaxDeductions(int uid) {
-    struct Employee *employee = NULL;
-
-    // Find the employee by UID
+void clientMenu(int uid) {
+    int option;
+    char check;
+    bool maritalStatusSet = false;
+    
     for (int i = 0; i < currentEmployeeCount; i++) {
-        if (employeeList[i].uid == uid) {
-            employee = &employeeList[i];
+        if (employeeList[i].uid == uid && employeeList[i].marital_status[0] != '\0') {
+            maritalStatusSet = true;
             break;
         }
     }
 
-    if (employee == NULL) {
-        setColor(RED);
-        printf("Error: Invalid UID!\n");
-        setColor(RESET);
-        return;
-    }
-
-    setColor(GREEN);
-    printf("\nTax Deductions for %s\n=========================\n", employee->username);
-    printf("Tax Deduction: %.2f\n", employee->salary * employee->tax_percent / 100);
-    printf("Provident Fund: %.2f\n", employee->salary * employee->pf_percent / 100);
-    printf("Insurance Premium: %.2f\n", employee->insurance_premium);
-    setColor(RESET);
-}
-
-void clientMenu(int uid) {
-    int option;
-    char check;
     while (1) {
         displayLoading();
         setColor(BLUE);
         printf("\nEmployee Payroll System - Client Menu\n=========================\n");
         setColor(RESET);
+        
+        if (!maritalStatusSet) {
+            setColor(RED);
+            printf("Notice: Please update your marital status in Personal Information.\n");
+            setColor(RESET);
+        }
+
         setColor(CYAN);
         printf("1. Personal Details\n");
         printf("2. Payroll Information\n");
@@ -587,7 +590,7 @@ void clientMenu(int uid) {
                 setColor(RESET);
                 setColor(CYAN);
                 printf("1) View Pay Slip\n");
-                printf("2) View Tax Deductions\n");
+                printf("2) View Payroll Guideline\n");
                 setColor(GREEN);
                 printf("Enter your choice: ");
                 scanf("%d", &subOption);
@@ -596,7 +599,7 @@ void clientMenu(int uid) {
                         viewPaySlip(uid);
                         break;
                     case 2:
-                        viewTaxDeductions(uid);
+                        displayPayrollGuideline();
                         break;
                     default:
                         setColor(RED);
@@ -656,11 +659,38 @@ int authenticateUser() {
     return 0;
 }
 
+void checkApprovalNotice(int uid) {
+    char password[PASSWORDLENGTH];
+    setColor(CYAN);
+    printf("Enter your UID: ");
+    setColor(RESET);
+    scanf("%d", &uid);
+
+    setColor(CYAN);
+    printf("Enter your password: ");
+    setColor(RESET);
+    getPasswordInput(password);  // Get password input securely
+    printf("\n");
+
+    int status = checkUserApprovalStatus(uid, password);
+    if (status == 1) {
+        setColor(GREEN);
+        printf("Your registration is approved.\n");
+    } else if (status == 0) {
+        setColor(YELLOW);
+        printf("Your registration is pending approval.\n");
+    } else {
+        setColor(RED);
+        printf("Error: Invalid UID or password!\n");
+    }
+    setColor(RESET);
+}
+
 void mainClientMenu() {
     int option;
     int isLoggedIn = 0;
     char check = '\0';
-
+	int uid = 0;
     while (1) {
         displayLoading();
         setColor(BLUE);
@@ -671,7 +701,8 @@ void mainClientMenu() {
         printf("2. Log In\n");
         printf("3. Change Password\n");
         printf("4. Forgot Password?\n");
-        printf("5. Go back to main menu\n");
+        printf("5. Approval Notice\n");
+        printf("6. Go back to main menu\n");
         printf("=========================\n");
         setColor(GREEN);
         printf("Enter your choice: ");
@@ -747,6 +778,25 @@ void mainClientMenu() {
                 setColor(RESET);
                 break;
             case 5:
+                displayLoading();
+                setColor(BLUE);
+                printf("\nEmployee Payroll System\n=========================\n");
+                setColor(RESET);
+                setColor(CYAN);
+                printf("5. Approval Notice\n");
+                checkApprovalNotice(uid);
+                setColor(CYAN);
+                printf("Do you want to continue (Y/N): ");
+                scanf(" %c", &check);
+                clearInputBuffer();
+                if (check == 'Y' || check == 'y') {
+                    break;
+                } else {
+                    displayExiting();
+                }
+                setColor(RESET);
+                break;
+            case 6:
                 return;
             default:
                 displayLoading();
@@ -1250,59 +1300,10 @@ void adminViewAllEmployeeDetails() {
     }
 }
 
-
-void generatePayroll() {
-    setColor(CYAN);
-    printf("\nGenerate Payroll\n=========================\n");
-    setColor(RESET);
-
-    for (int i = 0; i < currentEmployeeCount; i++) {
-        struct Employee *employee = &employeeList[i];
-        double gross_salary = employee->salary + employee->allowances + employee->overtime + employee->bonuses;
-        double tax_deduction = gross_salary * (employee->tax_percent / 100);
-        double pf_deduction = gross_salary * (employee->pf_percent / 100);
-        double net_salary = gross_salary - tax_deduction - pf_deduction - employee->insurance_premium;
-        employee->net_salary = net_salary;
-        setColor(GREEN);
-        printf("UID: %d, Username: %s, Net Salary: %.2f\n", employee->uid, employee->username, net_salary);
-        setColor(RESET);
-    }
-
-    saveEmployeeData();
-}
-
-void calculateTaxes() {
-    setColor(CYAN);
-    printf("\nCalculate Taxes\n=========================\n");
-    setColor(RESET);
-
-    // This can be enhanced with specific tax calculation logic as per Nepal Government policies
-    for (int i = 0; i < currentEmployeeCount; i++) {
-        struct Employee *employee = &employeeList[i];
-        double gross_salary = employee->salary + employee->allowances + employee->overtime + employee->bonuses;
-        double tax_deduction = gross_salary * (employee->tax_percent / 100);
-        setColor(GREEN);
-        printf("UID: %d, Username: %s, Tax Deduction: %.2f\n", employee->uid, employee->username, tax_deduction);
-        setColor(RESET);
-    }
-}
-
-void generateReports() {
-    setColor(CYAN);
-    printf("\nGenerate Reports\n=========================\n");
-    setColor(RESET);
-
-    for (int i = 0; i < currentEmployeeCount; i++) {
-        struct Employee *employee = &employeeList[i];
-        setColor(GREEN);
-        printf("UID: %d, Username: %s, Net Salary: %.2f\n", employee->uid, employee->username, employee->net_salary);
-        setColor(RESET);
-    }
-}
-
 void adminPayrollProcessing() {
     int option;
     char check;
+
     while (1) {
         displayLoading();
         setColor(BLUE);
@@ -1310,9 +1311,10 @@ void adminPayrollProcessing() {
         setColor(RESET);
         setColor(CYAN);
         printf("1. Update Employee Payroll\n");
-        printf("2. View Payroll Summary\n");
-        printf("3. Employee Payroll Guideline\n");
-        printf("4. Back to Admin Menu\n");
+        printf("2. View All Employee Payroll Summary\n");
+        printf("3. View Payroll Guideline\n");
+        printf("4. Search Employee Payroll Summary\n");
+        printf("5. Back to Admin Menu\n");
         printf("=========================\n");
         setColor(GREEN);
         printf("Enter your choice: ");
@@ -1323,23 +1325,15 @@ void adminPayrollProcessing() {
                 updateEmployeePayroll();
                 break;
             case 2:
-                viewPayrollSummary();
+                viewAllEmployeePayrollSummary();
                 break;
             case 3:
                 displayPayrollGuideline();
-                setColor(CYAN);
-                printf("Do you want to continue (Y/N): ");
-                scanf(" %c", &check);
-                clearInputBuffer();
-                if (check == 'Y' || check == 'y') {
-                    break;
-                } else {
-                    displayExiting();
-                }
-                setColor(RESET);
-                break;
                 break;
             case 4:
+                searchEmployeePayrollSummary();
+                break;
+            case 5:
                 return;
             default:
                 setColor(RED);
@@ -1352,7 +1346,7 @@ void adminPayrollProcessing() {
 
 void updateEmployeePayroll() {
     int uid;
-    double salary;
+    double salary, allowances, overtime, bonuses, insurance_premium;
 
     setColor(CYAN);
     printf("\nUpdate Employee Payroll\n=========================\n");
@@ -1360,18 +1354,54 @@ void updateEmployeePayroll() {
     
     printf("Enter UID of the employee: ");
     scanf("%d", &uid);
-    
+
+    // Check if the employee's marital status is recorded
+    for (int i = 0; i < currentEmployeeCount; i++) {
+        if (employeeList[i].uid == uid && strcmp(employeeList[i].marital_status, "") == 0) {
+            setColor(RED);
+            printf("Error: Employee must update their marital status first.\n");
+            setColor(RESET);
+            return;
+        }
+    }
+
     for (int i = 0; i < currentEmployeeCount; i++) {
         if (employeeList[i].uid == uid) {
             setColor(CYAN);
-            printf("Enter new salary: ");
+            printf("Enter new monthly salary: ");
             setColor(RESET);
             scanf("%lf", &salary);
             
-            employeeList[i].salary = salary;
+            setColor(CYAN);
+            printf("Enter new allowances: ");
+            setColor(RESET);
+            scanf("%lf", &allowances);
+            
+            setColor(CYAN);
+            printf("Enter new overtime payment: ");
+            setColor(RESET);
+            scanf("%lf", &overtime);
+            
+            setColor(CYAN);
+            printf("Enter new bonuses: ");
+            setColor(RESET);
+            scanf("%lf", &bonuses);
 
-            // Update payroll
+            setColor(CYAN);
+            printf("Enter new insurance premium: ");
+            setColor(RESET);
+            scanf("%lf", &insurance_premium);
+            
+            employeeList[i].salary = salary;
+            employeeList[i].allowances = allowances;
+            employeeList[i].overtime = overtime;
+            employeeList[i].bonuses = bonuses;
+            employeeList[i].insurance_premium = insurance_premium;
+
+            // Calculate taxes and PF according to the guidelines
             double gross_salary = employeeList[i].salary + employeeList[i].allowances + employeeList[i].overtime + employeeList[i].bonuses;
+            employeeList[i].tax_percent = (employeeList[i].marital_status[0] == 'M') ? 9 : 10;  // 9% for married, 10% for single
+            employeeList[i].pf_percent = 10;  // 10% for PF
             double tax_deduction = gross_salary * (employeeList[i].tax_percent / 100);
             double pf_deduction = gross_salary * (employeeList[i].pf_percent / 100);
             double net_salary = gross_salary - tax_deduction - pf_deduction - employeeList[i].insurance_premium;
@@ -1391,35 +1421,85 @@ void updateEmployeePayroll() {
     setColor(RESET);
 }
 
-void viewPayrollSummary() {
+void viewAllEmployeePayrollSummary() {
     setColor(CYAN);
-    printf("\nPayroll Summary\n=========================\n");
+    printf("\nAll Employee Payroll Summary\n=========================\n");
     setColor(RESET);
 
     for (int i = 0; i < currentEmployeeCount; i++) {
         struct Employee *employee = &employeeList[i];
+        double tax_deduction = employee->salary * (employee->tax_percent / 100);
+        double pf_deduction = employee->salary * (employee->pf_percent / 100);
+        double annual_salary = employee->net_salary * 12;
+
         setColor(GREEN);
-        printf("UID: %d, Username: %s, Net Salary: %.2f\n", employee->uid, employee->username, employee->net_salary);
+        printf("\nPay Slip for %s\n=========================\n", employee->username);
+        printf("UID: %d\n", employee->uid);
+        printf("Basic Salary: %.2f\n", employee->salary);
+        printf("Allowances: %.2f\n", employee->allowances);
+        printf("Overtime: %.2f\n", employee->overtime);
+        printf("Bonuses: %.2f\n", employee->bonuses);
+        printf("Tax Deduction: %.2f\n", tax_deduction);
+        printf("Provident Fund: %.2f\n", pf_deduction);
+        printf("Insurance Premium: %.2f\n", employee->insurance_premium);
+        printf("Net Salary: %.2f\n", employee->net_salary);
+        printf("Annual Salary: %.2f\n", annual_salary);
         setColor(RESET);
     }
 }
 
+void searchEmployeePayrollSummary() {
+    int uid;
+    setColor(CYAN);
+    printf("\nSearch Employee Payroll Summary\n=========================\n");
+    setColor(RESET);
+
+    printf("Enter UID of the employee: ");
+    scanf("%d", &uid);
+
+    for (int i = 0; i < currentEmployeeCount; i++) {
+        if (employeeList[i].uid == uid) {
+            struct Employee *employee = &employeeList[i];
+            double tax_deduction = employee->salary * (employee->tax_percent / 100);
+            double pf_deduction = employee->salary * (employee->pf_percent / 100);
+            double annual_salary = employee->net_salary * 12;
+
+            setColor(GREEN);
+            printf("\nPay Slip for %s\n=========================\n", employee->username);
+            printf("UID: %d\n", employee->uid);
+            printf("Basic Salary: %.2f\n", employee->salary);
+            printf("Allowances: %.2f\n", employee->allowances);
+            printf("Overtime: %.2f\n", employee->overtime);
+            printf("Bonuses: %.2f\n", employee->bonuses);
+            printf("Tax Deduction: %.2f\n", tax_deduction);
+            printf("Provident Fund: %.2f\n", pf_deduction);
+            printf("Insurance Premium: %.2f\n", employee->insurance_premium);
+            printf("Net Salary: %.2f\n", employee->net_salary);
+            printf("Annual Salary: %.2f\n", annual_salary);
+            setColor(RESET);
+            return;
+        }
+    }
+
+    setColor(RED);
+    printf("Error: UID not found!\n");
+    setColor(RESET);
+}
+
 void displayPayrollGuideline() {
-	char check;
     setColor(CYAN);
     printf("\nEmployee Payroll Guideline\n=========================\n");
-    setColor(RESET);
     setColor(GREEN);
     printf("1. Basic Salary: Base salary agreed upon employment.\n");
     printf("2. Allowances: Additional compensation (e.g., housing, transportation).\n");
     printf("3. Overtime: Pay for hours worked beyond standard work hours.\n");
     printf("4. Bonuses: Performance-based extra pay.\n");
     printf("5. Tax Deduction: Calculated based on the latest Nepal Government tax policies.\n");
-    printf("   - For married employees: 1% less tax.\n");
+    printf("   - For married employees: 1%% less tax.\n");
     printf("   - For single employees: Standard tax rate.\n");
     printf("6. Provident Fund (PF): Calculated based on the latest Nepal Government PF policies.\n");
-    printf("   - Employee contribution: 10%\n");
-    printf("   - Employer contribution: 10%\n");
+    printf("   - Employee contribution: 10%%\n");
+    printf("   - Employer contribution: 10%%\n");
     printf("7. Insurance Premium: Fixed amount as agreed.\n");
     printf("8. Net Salary: Gross salary minus tax, PF, and insurance premium.\n");
     setColor(RESET);
