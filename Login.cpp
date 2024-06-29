@@ -9,7 +9,7 @@
 #define PASSWORDLENGTH 50
 #define UIDLENGTH 10
 #define EMPLOYEE_FILE "Employees.bin"
-#define FILENAME "Login.txt"
+#define FILENAME "Login.bin"
 
 #define RESET 7
 #define RED FOREGROUND_RED
@@ -17,6 +17,9 @@
 #define YELLOW (FOREGROUND_RED | FOREGROUND_GREEN)
 #define BLUE (FOREGROUND_BLUE)
 #define CYAN (FOREGROUND_GREEN | FOREGROUND_BLUE)
+
+// XOR key for encryption and decryption
+#define XOR_KEY 0xAA
 
 // Define the User structure
 struct User {
@@ -81,6 +84,7 @@ void viewPaySlip(int uid);
 void clientMenu(int uid);
 int authenticateUser();
 void checkApprovalNotice(int uid);
+void employeeStatusNotice();
 void mainClientMenu();
 void saveAdminPassword(const char* password);
 int loadAdminPassword(char* password, int maxLength);
@@ -102,6 +106,11 @@ void viewAllEmployeePayrollSummary();
 void searchEmployeePayrollSummary();
 void displayPayrollGuideline();
 void viewPersonalInformation(int uid);
+void encryptionMenu();
+void decryptionMenu();
+void encryptionDecryptionTool();
+void viewAllEmployeeAuditLog();
+void searchEmployeeAuditLog();
 void adminEmployeeInfoManagement();
 void adminMenu();
 void mainMenu();
@@ -618,9 +627,10 @@ void clientMenu(int uid) {
     }
 
     while (1) {
+        clearScreen();
         displayLoading();
         setColor(BLUE);
-        printf("\nEmployee Payroll System - Client Menu\n=========================\n");
+        printf("\nCipherPayroll - Employee Payroll System - Client Menu\n=========================\n");
         setColor(RESET);
 
         // Show UID and username after successful login
@@ -791,23 +801,63 @@ void checkApprovalNotice(int uid) {
     setColor(RESET);
 }
 
+void employeeStatusNotice() {
+    int uid;
+    char password[PASSWORDLENGTH];
+
+    setColor(CYAN);
+    printf("Enter your UID: ");
+    setColor(RESET);
+    scanf("%d", &uid);
+
+    setColor(CYAN);
+    printf("Enter your password: ");
+    setColor(RESET);
+    getPasswordInput(password);  // Get password input securely
+    printf("\n");
+
+    for (int i = 0; i < currentEmployeeCount; i++) {
+        if (employeeList[i].uid == uid && strcmp(employeeList[i].password, password) == 0) {
+            if (employeeList[i].status == 'A') {
+                setColor(GREEN);
+                printf("Status: %c\n", employeeList[i].status);
+            } else if (employeeList[i].status == 'I') {
+                setColor(YELLOW);
+                printf("Status: %c\n", employeeList[i].status);
+            } else if (employeeList[i].status == 'T') {
+                setColor(RED);
+                printf("Status: %c\n", employeeList[i].status);
+            }
+            printf("Position: %s\n", employeeList[i].position);
+            setColor(RESET);
+            return;
+        }
+    }
+
+    setColor(RED);
+    printf("Error: Invalid UID or password!\n");
+    setColor(RESET);
+}
+
 void mainClientMenu() {
     int option;
     int isLoggedIn = 0;
     char check = '\0';
-	int uid = 0;
+    int uid = 0;
     while (1) {
+        clearScreen();
         displayLoading();
         setColor(BLUE);
-        printf("\nEmployee Payroll System\n=========================\n");
+        printf("\nCipherPayroll - Main Client Menu\n=========================\n");
         setColor(RESET);
         setColor(CYAN);
         printf("1. Register\n");
         printf("2. Log In\n");
         printf("3. Change Password\n");
         printf("4. Forgot Password?\n");
-        printf("5. Approval Notice\n");
-        printf("6. Go back to main menu\n");
+        printf("5. Check Approval Notice\n");
+        printf("6. Employee Status Notice\n");
+        printf("7. Go back to main menu\n");
         printf("=========================\n");
         setColor(GREEN);
         printf("Enter your choice: ");
@@ -817,25 +867,16 @@ void mainClientMenu() {
             case 1:
                 displayLoading();
                 setColor(BLUE);
-                printf("\nEmployee Payroll System\n=========================\n");
+                printf("\nCipherPayroll\n=========================\n");
                 setColor(RESET);
                 setColor(CYAN);
                 printf("1. Register\n");
                 registerUser();
-                setColor(CYAN);
-                printf("Do you want to continue (Y/N): ");
-                scanf(" %c", &check);
-                if (check == 'Y' || check == 'y') {
-                    break;
-                } else {
-                    displayExiting();
-                }
-                setColor(RESET);
                 break;
             case 2:
                 displayLoading();
                 setColor(BLUE);
-                printf("\nEmployee Payroll System\n=========================\n");
+                printf("\nCipherPayroll\n=========================\n");
                 setColor(RESET);
                 setColor(CYAN);
                 printf("2. Log In\n");
@@ -847,69 +888,51 @@ void mainClientMenu() {
             case 3:
                 displayLoading();
                 setColor(BLUE);
-                printf("\nEmployee Payroll System\n=========================\n");
+                printf("\nCipherPayroll\n=========================\n");
                 setColor(RESET);
                 setColor(CYAN);
                 printf("3. Change Password\n");
                 updatePassword();
-                setColor(CYAN);
-                printf("Do you want to continue (Y/N): ");
-                scanf(" %c", &check);
-                clearInputBuffer();
-                if (check == 'Y' || check == 'y') {
-                    break;
-                } else {
-                    displayExiting();
-                }
-                setColor(RESET);
                 break;
             case 4:
                 displayLoading();
                 setColor(BLUE);
-                printf("\nEmployee Payroll System\n=========================\n");
+                printf("\nCipherPayroll\n=========================\n");
                 setColor(RESET);
                 setColor(CYAN);
                 printf("4. Forgot Password?\n");
                 resetUserPassword();
-                setColor(CYAN);
-                printf("Do you want to continue (Y/N): ");
-                scanf(" %c", &check);
-                clearInputBuffer();
-                if (check == 'Y' || check == 'y') {
-                    break;
-                } else {
-                    displayExiting();
-                }
-                setColor(RESET);
                 break;
             case 5:
                 displayLoading();
                 setColor(BLUE);
-                printf("\nEmployee Payroll System\n=========================\n");
+                printf("\nCipherPayroll\n=========================\n");
                 setColor(RESET);
                 setColor(CYAN);
-                printf("5. Approval Notice\n");
+                printf("5. Check Approval Notice\n");
                 checkApprovalNotice(uid);
-                setColor(CYAN);
-                printf("Do you want to continue (Y/N): ");
-                scanf(" %c", &check);
-                clearInputBuffer();
-                if (check == 'Y' || check == 'y') {
-                    break;
-                } else {
-                    displayExiting();
-                }
-                setColor(RESET);
                 break;
             case 6:
+                displayLoading();
+                setColor(BLUE);
+                printf("\nCipherPayroll\n=========================\n");
+                setColor(RESET);
+                setColor(CYAN);
+                printf("6. Employee Status and Position Notice\n");
+                employeeStatusNotice();
+                break;
+            case 7:
                 return;
             default:
                 displayLoading();
-                printf("\nEmployee Payroll System\n=========================\n");
+                printf("\nCipherPayroll\n=========================\n");
                 setColor(RED);
                 printf("Error: Invalid option!\n");
                 setColor(RESET);
                 break;
+        }
+        if (!continuePrompt()) {
+            break;
         }
     }
 }
@@ -1072,7 +1095,6 @@ void adminChangeAdminPassword() {
         _getch();
     }
 }
-
 // Check user approval status
 int checkUserApprovalStatus(int uid, char* password) {
     for (int i = 0; i < currentUserCount; i++) {
@@ -1198,6 +1220,18 @@ void adminEditEmployeeDetails() {
                             printf("Error: Invalid position!\n");
                             setColor(RESET);
                             return;
+                        }
+
+                        // Check if there is already a chairman
+                        if (strcmp(employeeList[i].position, "chairman") == 0) {
+                            for (int j = 0; j < currentEmployeeCount; j++) {
+                                if (j != i && strcmp(employeeList[j].position, "chairman") == 0) {
+                                    setColor(RED);
+                                    printf("Error: There can only be one chairman in the company!\n");
+                                    setColor(RESET);
+                                    return;
+                                }
+                            }
                         }
                         break;
                     case 4:
@@ -1690,7 +1724,46 @@ void searchEmployeePayrollSummary() {
     setColor(RESET);
 }
 
-void viewAdminAuditLog() {
+void auditLogMenu() {
+    int option;
+
+    while (1) {
+        clearScreen();
+        displayLoading();
+        setColor(BLUE);
+        printf("\nCipherPayroll - Audit Log Menu\n=========================\n");
+        setColor(RESET);
+        setColor(CYAN);
+        printf("1. View All Employee's Audit Log\n");
+        printf("2. Search Employee's Audit Log\n");
+        printf("3. Back to Admin Menu\n");
+        printf("=========================\n");
+        setColor(GREEN);
+        printf("Enter your choice: ");
+        scanf("%d", &option);
+
+        switch (option) {
+            case 1:
+                viewAllEmployeeAuditLog();
+                break;
+            case 2:
+                searchEmployeeAuditLog();
+                break;
+            case 3:
+                return;
+            default:
+                setColor(RED);
+                printf("Error: Invalid option!\n");
+                setColor(RESET);
+                break;
+        }
+        if (!continuePrompt()) {
+            break;
+        }
+    }
+}
+
+void viewAllEmployeeAuditLog() {
     setColor(CYAN);
     printf("\nAudit Log for All Employees\n=========================\n");
     setColor(RESET);
@@ -1722,6 +1795,51 @@ void viewAdminAuditLog() {
     }
 }
 
+void searchEmployeeAuditLog() {
+    int uid;
+    setColor(BLUE);
+    printf("\nSearch Employee Audit Log\n=========================\n");
+    setColor(RESET);
+
+    setColor(CYAN);
+    printf("Enter UID of the employee to search: ");
+    setColor(RESET);
+    scanf("%d", &uid);
+
+    for (int i = 0; i < currentEmployeeCount; i++) {
+        if (employeeList[i].uid == uid) {
+            struct Employee *employee = &employeeList[i];
+
+            setColor(GREEN);
+            printf("\nAudit Log for %s\n=========================\n", employee->username);
+            setColor(RESET);
+
+            for (int year = 1; year <= employee->currentYear; year++) {
+                struct Payroll *payroll = &employee->payrolls[year];
+                double annual_salary = payroll->net_salary * 12;
+
+                setColor(GREEN);
+                printf("\nPayroll for Year %d\n-------------------------\n", year);
+                printf("Basic Salary: %.2f\n", payroll->salary);
+                printf("Allowances: %.2f\n", payroll->allowances);
+                printf("Overtime: %.2f\n", payroll->overtime);
+                printf("Bonuses: %.2f\n", payroll->bonuses);
+                printf("Tax Deduction: %.2f\n", payroll->tax_deduction);
+                printf("Provident Fund: %.2f\n", payroll->pf_deduction);
+                printf("Insurance Premium: %.2f\n", payroll->insurance_premium);
+                printf("Net Salary: %.2f\n", payroll->net_salary);
+                printf("Annual Salary: %.2f\n", annual_salary);
+                setColor(RESET);
+            }
+            return;
+        }
+    }
+
+    setColor(RED);
+    printf("Error: UID not found!\n");
+    setColor(RESET);
+}
+
 void displayPayrollGuideline() {
     setColor(CYAN);
     printf("\nEmployee Payroll Guideline\n=========================\n");
@@ -1739,6 +1857,214 @@ void displayPayrollGuideline() {
     printf("7. Insurance Premium: Fixed amount as agreed.\n");
     printf("8. Net Salary: Gross salary minus tax, PF, and insurance premium.\n");
     setColor(RESET);
+}
+
+void encryptionDecryptionTool() {
+    int option;
+
+    while (1) {
+        clearScreen();
+        displayLoading();
+        setColor(BLUE);
+        printf("\nCipherPayroll - Encryption/Decryption Tool\n=========================\n");
+        setColor(RESET);
+        setColor(CYAN);
+        printf("1. Encryption\n");
+        printf("2. Decryption\n");
+        printf("3. Back to Admin Menu\n");
+        printf("=========================\n");
+        setColor(GREEN);
+        printf("Enter your choice: ");
+        scanf("%d", &option);
+
+        switch (option) {
+            case 1:
+                encryptionMenu();
+                break;
+            case 2:
+                decryptionMenu();
+                break;
+            case 3:
+                return;
+            default:
+                setColor(RED);
+                printf("Error: Invalid option!\n");
+                setColor(RESET);
+                break;
+        }
+        if (!continuePrompt()) {
+            break;
+        }
+    }
+}
+
+void encryptFile(const char *filename) {
+    FILE *file = fopen(filename, "rb+");
+    if (!file) {
+        setColor(RED);
+        printf("Error: Cannot open file %s for encryption!\n", filename);
+        setColor(RESET);
+        return;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long fileSize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    char *buffer = (char *)malloc(fileSize);
+    if (!buffer) {
+        setColor(RED);
+        printf("Error: Memory allocation failed!\n");
+        setColor(RESET);
+        fclose(file);
+        return;
+    }
+
+    fread(buffer, 1, fileSize, file);
+    fseek(file, 0, SEEK_SET);
+
+    for (long i = 0; i < fileSize; i++) {
+        buffer[i] ^= XOR_KEY;
+    }
+
+    fwrite(buffer, 1, fileSize, file);
+    fclose(file);
+
+    // Overwrite file content with asterisks for visibility
+    file = fopen(filename, "w");
+    for (long i = 0; i < fileSize; i++) {
+        fputc('*', file);
+    }
+
+    free(buffer);
+    fclose(file);
+    setColor(GREEN);
+    printf("File %s encrypted successfully!\n", filename);
+    setColor(RESET);
+}
+
+void decryptFile(const char *filename) {
+    FILE *file = fopen(filename, "rb+");
+    if (!file) {
+        setColor(RED);
+        printf("Error: Cannot open file %s for decryption!\n", filename);
+        setColor(RESET);
+        return;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long fileSize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    char *buffer = (char *)malloc(fileSize);
+    if (!buffer) {
+        setColor(RED);
+        printf("Error: Memory allocation failed!\n");
+        setColor(RESET);
+        fclose(file);
+        return;
+    }
+
+    fread(buffer, 1, fileSize, file);
+    fseek(file, 0, SEEK_SET);
+
+    for (long i = 0; i < fileSize; i++) {
+        buffer[i] ^= XOR_KEY;
+    }
+
+    file = fopen(filename, "wb");
+    fwrite(buffer, 1, fileSize, file);
+
+    free(buffer);
+    fclose(file);
+    setColor(GREEN);
+    printf("File %s decrypted successfully!\n", filename);
+    setColor(RESET);
+}
+
+
+void encryptionMenu() {
+    int option;
+
+    while (1) {
+        clearScreen();
+        setColor(BLUE);
+        printf("\nCipherPayroll - Encryption Menu\n=========================\n");
+        setColor(RESET);
+        setColor(CYAN);
+        printf("1. Encrypt Employees.bin\n");
+        printf("2. Encrypt Login.bin\n");
+        printf("3. Encrypt Admin password.txt\n");
+        printf("4. Back to Encryption/Decryption Tool Menu\n");
+        printf("=========================\n");
+        setColor(GREEN);
+        printf("Enter your choice: ");
+        scanf("%d", &option);
+
+        switch (option) {
+            case 1:
+                encryptFile("Employees.bin");
+                break;
+            case 2:
+                encryptFile("Login.bin");
+                break;
+            case 3:
+                encryptFile("AdminPassword.txt");
+                break;
+            case 4:
+                return;
+            default:
+                setColor(RED);
+                printf("Error: Invalid option!\n");
+                setColor(RESET);
+                break;
+        }
+        if (!continuePrompt()) {
+            break;
+        }
+    }
+}
+
+void decryptionMenu() {
+    int option;
+
+    while (1) {
+        clearScreen();
+        setColor(BLUE);
+        printf("\nCipherPayroll - Decryption Menu\n=========================\n");
+        setColor(RESET);
+        setColor(CYAN);
+        printf("1. Decrypt Employees.bin\n");
+        printf("2. Decrypt Login.bin\n");
+        printf("3. Decrypt Admin password.txt\n");
+        printf("4. Back to Encryption/Decryption Tool Menu\n");
+        printf("=========================\n");
+        setColor(GREEN);
+        printf("Enter your choice: ");
+        scanf("%d", &option);
+
+        switch (option) {
+            case 1:
+                decryptFile("Employees.bin");
+                break;
+            case 2:
+                decryptFile("Login.bin");
+                break;
+            case 3:
+                decryptFile("AdminPassword.txt");
+                break;
+            case 4:
+                return;
+            default:
+                setColor(RED);
+                printf("Error: Invalid option!\n");
+                setColor(RESET);
+                break;
+        }
+        if (!continuePrompt()) {
+            break;
+        }
+    }
 }
 
 void adminEmployeeInfoManagement() {
@@ -1800,14 +2126,15 @@ void adminMenu() {
     while (1) {
         displayLoading();
         setColor(BLUE);
-        printf("\nAdmin Menu\n=========================\n");
+        printf("\nCipherPayroll - Admin Menu\n=========================\n");
         setColor(RESET);
         setColor(CYAN);
         printf("1. Employee Information Management\n");
         printf("2. Payroll Processing\n");
         printf("3. Change Admin's Password\n");
-        printf("4. View Audit Log\n");
-        printf("5. Back to Main Menu\n");
+        printf("4. Audit Log\n");
+        printf("5. Encryption/Decryption Tool\n");
+        printf("6. Back to Main Menu\n");
         printf("=========================\n");
         setColor(GREEN);
         printf("Enter your choice: ");
@@ -1824,9 +2151,12 @@ void adminMenu() {
                 adminChangeAdminPassword();
                 break;
             case 4:
-                viewAdminAuditLog();
+                auditLogMenu();
                 break;
             case 5:
+                encryptionDecryptionTool();
+                break;
+            case 6:
                 return;
             default:
                 displayLoading();
@@ -1841,6 +2171,7 @@ void adminMenu() {
         }
     }
 }
+
 void mainMenu() {
     int option;
     char adminPassword[PASSWORDLENGTH];
@@ -1848,7 +2179,7 @@ void mainMenu() {
     while (1) {
         displayLoading();
         setColor(BLUE);
-        printf("\nEmployee Payroll System\n=========================\n");
+        printf("\nCipherPayroll - Employee Payroll System\n=========================\n");
         setColor(RESET);
         setColor(CYAN);
         printf("=========================\n");
@@ -1893,7 +2224,7 @@ void mainMenu() {
                 exit(0);
             default:
                 displayLoading();
-                printf("\nEmployee Payroll System\n=========================\n");
+                printf("\nCipherPayroll - Employee Payroll System\n=========================\n");
                 setColor(RED);
                 printf("Error: Invalid option!\n");
                 setColor(RESET);
@@ -1901,5 +2232,4 @@ void mainMenu() {
         }
     }
 }
-
 
