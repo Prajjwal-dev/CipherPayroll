@@ -1928,13 +1928,6 @@ void encryptFile(const char *filename) {
     }
 
     fwrite(buffer, 1, fileSize, file);
-    fclose(file);
-
-    // Overwrite file content with asterisks for visibility
-    file = fopen(filename, "w");
-    for (long i = 0; i < fileSize; i++) {
-        fputc('*', file);
-    }
 
     free(buffer);
     fclose(file);
@@ -1972,7 +1965,6 @@ void decryptFile(const char *filename) {
         buffer[i] ^= XOR_KEY;
     }
 
-    file = fopen(filename, "wb");
     fwrite(buffer, 1, fileSize, file);
 
     free(buffer);
