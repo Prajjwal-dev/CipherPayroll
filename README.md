@@ -1,4 +1,4 @@
-# Employee-Payroll-System-with-Encryption-Tool
+# CipherPayroll - Employee Payroll System
 CipherPayroll is a console-based Employee Payroll System written in C. It offers features for admin and employee management, payroll processing, and secure data handling through encryption. Key functionalities include:
 
 - Admin and Client login systems
