@@ -3,6 +3,8 @@
 #include <string.h>
 #include <windows.h>
 #include <conio.h>
+#include <signal.h>
+#include <time.h>
 
 #define MAXUSERS 100
 #define USERNAMELENGTH 50
@@ -62,8 +64,8 @@ int latestUID = 1;  // Starting point for UIDs
 struct Employee employeeList[MAXUSERS];
 int currentEmployeeCount = 0;
 
-
 //Function Declaration
+void setupSignalHandlers();
 void setColor(int color);
 void clearScreen();
 void displayLoading();
@@ -106,17 +108,29 @@ void viewAllEmployeePayrollSummary();
 void searchEmployeePayrollSummary();
 void displayPayrollGuideline();
 void viewPersonalInformation(int uid);
-void encryptionMenu();
-void decryptionMenu();
-void encryptionDecryptionTool();
+bool isFileEncrypted(const char *filename);
+void encryptFile(const char *filename);
+void decryptFile(const char *filename);
+void encryptFilesOnExit(int signal);
 void viewAllEmployeeAuditLog();
 void searchEmployeeAuditLog();
 void adminEmployeeInfoManagement();
 void adminMenu();
 void mainMenu();
+void encryptFiles();
+BOOL WINAPI ConsoleHandler(DWORD signal);
+void setupConsoleHandler();
 
-//Main Function
 int main() {
+    setupConsoleHandler();
+    atexit(encryptFiles);
+
+    // Ensure the necessary files are decrypted before use
+    decryptFile("Login.bin");
+    decryptFile("Employees.bin");
+    decryptFile("AdminPassword.txt");
+
+    // Your existing initialization code
     loadUserData();
     loadEmployeeData();
 
@@ -125,12 +139,12 @@ int main() {
         saveInitialAdminPassword();
     }
 
+    // Main menu
     mainMenu();
-    
+
     return 0;
 }
 
-//Function Definition
 void setColor(int color) {
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     SetConsoleTextAttribute(hConsole, color);
@@ -138,6 +152,26 @@ void setColor(int color) {
 
 void clearScreen() {
     system("cls");
+}
+
+void encryptFiles() {
+    encryptFile("Login.bin");
+	encryptFile("Employees.bin");
+    encryptFile("AdminPassword.txt");
+}
+
+BOOL WINAPI ConsoleHandler(DWORD signal) {
+    if (signal == CTRL_CLOSE_EVENT || signal == CTRL_LOGOFF_EVENT || signal == CTRL_SHUTDOWN_EVENT) {
+        encryptFiles();
+        return TRUE;
+    }
+    return FALSE;
+}
+
+void setupConsoleHandler() {
+    if (!SetConsoleCtrlHandler(ConsoleHandler, TRUE)) {
+        exit(1);
+    }
 }
 
 void displayLoading() {
@@ -165,6 +199,9 @@ void displayExiting() {
     }
     printf("\n");
     setColor(RESET);
+    encryptFile("Login.bin");
+    encryptFile("Employees.bin");
+    encryptFile("AdminPassword.txt");
     exit(0);
 }
 
@@ -286,11 +323,47 @@ void registerUser() {
     fgets(newUser.username, USERNAMELENGTH, stdin);
     newUser.username[strcspn(newUser.username, "\n")] = '\0';
 
-    setColor(CYAN);
-    printf("Enter Password: ");
-    setColor(RESET);
-    getPasswordInput(newUser.password);
-    printf("\n");
+    while (1) {
+        setColor(CYAN);
+        printf("Enter Password: ");
+        setColor(RESET);
+        getPasswordInput(newUser.password);
+        printf("\n");
+
+        setColor(CYAN);
+        printf("Re-enter Password: ");
+        setColor(RESET);
+        char reenterPassword[PASSWORDLENGTH];
+        getPasswordInput(reenterPassword);
+        printf("\n");
+
+        if (strcmp(newUser.password, reenterPassword) != 0) {
+            setColor(RED);
+            printf("Error: Passwords do not match! Please try again.\n");
+            setColor(RESET);
+            continue;
+        }
+
+        bool hasSpecialChar = false;
+        bool hasDigit = false;
+        for (int i = 0; i < strlen(newUser.password); i++) {
+            if (ispunct(newUser.password[i])) {
+                hasSpecialChar = true;
+            }
+            if (isdigit(newUser.password[i])) {
+                hasDigit = true;
+            }
+        }
+
+        if (!hasSpecialChar || !hasDigit) {
+            setColor(RED);
+            printf("Error: Password must contain at least one special character and one numeric character. Please try again.\n");
+            setColor(RESET);
+            continue;
+        }
+
+        break;
+    }
 
     userList[currentUserCount++] = newUser;
     saveUserData();
@@ -299,6 +372,7 @@ void registerUser() {
     printf("Registration successful! Please wait for admin approval.\n");
     setColor(RESET);
 }
+
 
 void updatePersonalDetails() {
     int uid;
@@ -674,6 +748,7 @@ void clientMenu(int uid) {
                 setColor(CYAN);
                 printf("1) View Personal Information\n");
                 printf("2) Update Personal Information\n");
+                printf("3) Go back\n");
                 setColor(GREEN);
                 printf("Enter your choice: ");
                 scanf("%d", &subOption);
@@ -684,6 +759,8 @@ void clientMenu(int uid) {
                     case 2:
                         updatePersonalDetails();
                         maritalStatusSet = true; // Update the status after changing
+                        break;
+                    case 3:
                         break;
                     default:
                         setColor(RED);
@@ -700,6 +777,7 @@ void clientMenu(int uid) {
                 setColor(CYAN);
                 printf("1) View Pay Slip\n");
                 printf("2) View Payroll Guideline\n");
+                printf("3) Go back\n");
                 setColor(GREEN);
                 printf("Enter your choice: ");
                 scanf("%d", &subOption);
@@ -709,6 +787,8 @@ void clientMenu(int uid) {
                         break;
                     case 2:
                         displayPayrollGuideline();
+                        break;
+                    case 3:
                         break;
                     default:
                         setColor(RED);
@@ -968,21 +1048,19 @@ int loadAdminPassword(char* password, int maxLength) {
 }
 
 bool isInitialAdminPasswordSet() {
-    FILE *file = fopen("AdminPassword.txt", "r");
-    if (file != NULL) {
-        fclose(file); // Close the file if it exists
-        return true;
-    } else {
-        return false;
+    FILE* file = fopen("AdminPassword.txt", "r");
+    if (file == NULL) {
+        return false; // File does not exist
     }
+    char buffer[256];
+    bool isSet = (fgets(buffer, sizeof(buffer), file) != NULL && strlen(buffer) > 0);
+    fclose(file);
+    return isSet;
 }
 
 void saveInitialAdminPassword() {
     FILE* file = fopen("AdminPassword.txt", "w");
     if (file == NULL) {
-        setColor(RED);
-        printf("Error: Cannot open AdminPassword.txt for writing!\n");
-        setColor(RESET);
         return;
     }
     fprintf(file, "admin123\n"); // Write the initial password
@@ -1094,7 +1172,11 @@ void adminChangeAdminPassword() {
         printf("\nPress any key to continue...\n");
         _getch();
     }
+
+    // Redirect to main menu after changing the admin's password
+    mainMenu();
 }
+
 // Check user approval status
 int checkUserApprovalStatus(int uid, char* password) {
     for (int i = 0; i < currentUserCount; i++) {
@@ -1859,51 +1941,9 @@ void displayPayrollGuideline() {
     setColor(RESET);
 }
 
-void encryptionDecryptionTool() {
-    int option;
-
-    while (1) {
-        clearScreen();
-        displayLoading();
-        setColor(BLUE);
-        printf("\nCipherPayroll - Encryption/Decryption Tool\n=========================\n");
-        setColor(RESET);
-        setColor(CYAN);
-        printf("1. Encryption\n");
-        printf("2. Decryption\n");
-        printf("3. Back to Admin Menu\n");
-        printf("=========================\n");
-        setColor(GREEN);
-        printf("Enter your choice: ");
-        scanf("%d", &option);
-
-        switch (option) {
-            case 1:
-                encryptionMenu();
-                break;
-            case 2:
-                decryptionMenu();
-                break;
-            case 3:
-                return;
-            default:
-                setColor(RED);
-                printf("Error: Invalid option!\n");
-                setColor(RESET);
-                break;
-        }
-        if (!continuePrompt()) {
-            break;
-        }
-    }
-}
-
-void encryptFile(const char *filename) {
-    FILE *file = fopen(filename, "rb+");
+void encryptFile(const char* filename) {
+    FILE* file = fopen(filename, "rb+");
     if (!file) {
-        setColor(RED);
-        printf("Error: Cannot open file %s for encryption!\n", filename);
-        setColor(RESET);
         return;
     }
 
@@ -1911,11 +1951,8 @@ void encryptFile(const char *filename) {
     long fileSize = ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    char *buffer = (char *)malloc(fileSize);
+    char* buffer = (char*)malloc(fileSize);
     if (!buffer) {
-        setColor(RED);
-        printf("Error: Memory allocation failed!\n");
-        setColor(RESET);
         fclose(file);
         return;
     }
@@ -1928,20 +1965,13 @@ void encryptFile(const char *filename) {
     }
 
     fwrite(buffer, 1, fileSize, file);
-
     free(buffer);
     fclose(file);
-    setColor(GREEN);
-    printf("File %s encrypted successfully!\n", filename);
-    setColor(RESET);
 }
 
-void decryptFile(const char *filename) {
-    FILE *file = fopen(filename, "rb+");
+void decryptFile(const char* filename) {
+    FILE* file = fopen(filename, "rb+");
     if (!file) {
-        setColor(RED);
-        printf("Error: Cannot open file %s for decryption!\n", filename);
-        setColor(RESET);
         return;
     }
 
@@ -1949,11 +1979,8 @@ void decryptFile(const char *filename) {
     long fileSize = ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    char *buffer = (char *)malloc(fileSize);
+    char* buffer = (char*)malloc(fileSize);
     if (!buffer) {
-        setColor(RED);
-        printf("Error: Memory allocation failed!\n");
-        setColor(RESET);
         fclose(file);
         return;
     }
@@ -1966,97 +1993,21 @@ void decryptFile(const char *filename) {
     }
 
     fwrite(buffer, 1, fileSize, file);
-
     free(buffer);
     fclose(file);
-    setColor(GREEN);
-    printf("File %s decrypted successfully!\n", filename);
-    setColor(RESET);
 }
 
-
-void encryptionMenu() {
-    int option;
-
-    while (1) {
-        clearScreen();
-        setColor(BLUE);
-        printf("\nCipherPayroll - Encryption Menu\n=========================\n");
-        setColor(RESET);
-        setColor(CYAN);
-        printf("1. Encrypt Employees.bin\n");
-        printf("2. Encrypt Login.bin\n");
-        printf("3. Encrypt Admin password.txt\n");
-        printf("4. Back to Encryption/Decryption Tool Menu\n");
-        printf("=========================\n");
-        setColor(GREEN);
-        printf("Enter your choice: ");
-        scanf("%d", &option);
-
-        switch (option) {
-            case 1:
-                encryptFile("Employees.bin");
-                break;
-            case 2:
-                encryptFile("Login.bin");
-                break;
-            case 3:
-                encryptFile("AdminPassword.txt");
-                break;
-            case 4:
-                return;
-            default:
-                setColor(RED);
-                printf("Error: Invalid option!\n");
-                setColor(RESET);
-                break;
-        }
-        if (!continuePrompt()) {
-            break;
-        }
-    }
+void encryptFilesOnExit(int signal) {
+    encryptFile("Login.bin");
+    encryptFile("Employees.bin");
+    encryptFile("AdminPassword.txt");
+    exit(signal);
 }
 
-void decryptionMenu() {
-    int option;
-
-    while (1) {
-        clearScreen();
-        setColor(BLUE);
-        printf("\nCipherPayroll - Decryption Menu\n=========================\n");
-        setColor(RESET);
-        setColor(CYAN);
-        printf("1. Decrypt Employees.bin\n");
-        printf("2. Decrypt Login.bin\n");
-        printf("3. Decrypt Admin password.txt\n");
-        printf("4. Back to Encryption/Decryption Tool Menu\n");
-        printf("=========================\n");
-        setColor(GREEN);
-        printf("Enter your choice: ");
-        scanf("%d", &option);
-
-        switch (option) {
-            case 1:
-                decryptFile("Employees.bin");
-                break;
-            case 2:
-                decryptFile("Login.bin");
-                break;
-            case 3:
-                decryptFile("AdminPassword.txt");
-                break;
-            case 4:
-                return;
-            default:
-                setColor(RED);
-                printf("Error: Invalid option!\n");
-                setColor(RESET);
-                break;
-        }
-        if (!continuePrompt()) {
-            break;
-        }
-    }
+void setupSignalHandlers() {
+    signal(SIGINT, encryptFilesOnExit);
+    signal(SIGTERM, encryptFilesOnExit);
+    signal(SIGABRT, encryptFilesOnExit);
 }
 
 void adminEmployeeInfoManagement() {
@@ -2125,8 +2076,7 @@ void adminMenu() {
         printf("2. Payroll Processing\n");
         printf("3. Change Admin's Password\n");
         printf("4. Audit Log\n");
-        printf("5. Encryption/Decryption Tool\n");
-        printf("6. Back to Main Menu\n");
+        printf("5. Back to Main Menu\n");
         printf("=========================\n");
         setColor(GREEN);
         printf("Enter your choice: ");
@@ -2146,9 +2096,6 @@ void adminMenu() {
                 auditLogMenu();
                 break;
             case 5:
-                encryptionDecryptionTool();
-                break;
-            case 6:
                 return;
             default:
                 displayLoading();
@@ -2163,6 +2110,7 @@ void adminMenu() {
         }
     }
 }
+
 
 void mainMenu() {
     int option;
