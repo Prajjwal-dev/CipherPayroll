@@ -3,6 +3,7 @@
 #include <string.h>    // String handling library
 #include <windows.h>   // Windows-specific API declarations
 #include <conio.h>     // Console input/output functions
+#include <stdbool.h> //For Boolean Data type
 
 // Define constants for user and employee management
 #define MAXUSERS 100                // Maximum number of users
