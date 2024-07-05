@@ -1290,6 +1290,27 @@ void adminChangeAdminPassword() {
             return;
         }
 
+        // Check for strong password criteria
+        bool hasSpecialChar = false;
+        bool hasDigit = false;
+        for (int i = 0; i < strlen(newPassword); i++) {
+            if (ispunct(newPassword[i])) {
+                hasSpecialChar = true;
+            }
+            if (isdigit(newPassword[i])) {
+                hasDigit = true;
+            }
+        }
+
+        if (!hasSpecialChar || !hasDigit) {
+            setColor(RED);
+            printf("Error: Password must contain at least one special character and one numeric character (0-9)!\n");
+            setColor(RESET);
+            printf("\nPress any key to continue...\n");
+            _getch();
+            return;
+        }
+
         // Prompt to re-enter new password
         setColor(CYAN);
         printf("Re-enter the new password: ");
@@ -1344,6 +1365,27 @@ void adminChangeAdminPassword() {
         if (strchr(newPassword, ' ') != NULL) {
             setColor(RED);
             printf("Error: Password cannot contain spaces!\n");
+            setColor(RESET);
+            printf("\nPress any key to continue...\n");
+            _getch();
+            return;
+        }
+
+        // Check for strong password criteria
+        bool hasSpecialChar = false;
+        bool hasDigit = false;
+        for (int i = 0; i < strlen(newPassword); i++) {
+            if (ispunct(newPassword[i])) {
+                hasSpecialChar = true;
+            }
+            if (isdigit(newPassword[i])) {
+                hasDigit = true;
+            }
+        }
+
+        if (!hasSpecialChar || !hasDigit) {
+            setColor(RED);
+            printf("Error: Password must contain at least one special character and one numeric character (0-9)!\n");
             setColor(RESET);
             printf("\nPress any key to continue...\n");
             _getch();
