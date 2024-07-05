@@ -242,6 +242,7 @@ int main() {
     setupConsoleHandler();
     atexit(encryptFiles);
 
+	// Use of DMA(Dynamic Memory Allocation)
     // Allocate memory for user and employee lists
     userList = (struct User*)malloc(MAXUSERS * sizeof(struct User));
     employeeList = (struct Employee*)malloc(MAXUSERS * sizeof(struct Employee));
@@ -2396,15 +2397,15 @@ void displayAboutUs() {
     printf("experience for both employees and administrators.\n\n");
     printf("Features:\n");
     printf("---------------------------------------------------------------------\n");
-    printf("1. Secure Data Handling: Using XOR encryption to protect sensitive data.\n");
+    printf("1. Secure Data Handling: Using encryption/decryption tool to protect sensitive data.\n");
     printf("2. Comprehensive Payroll Management: Handle salaries, allowances, bonuses,\n");
     printf("   and deductions efficiently.\n");
     printf("3. Detailed Employee Information: Maintain and manage employee details \n");
     printf("   with ease.\n");
     printf("4. User-Friendly Interface: Designed for simplicity and ease of use.\n\n");
-    printf("Our team is composed of Prajjwal Maharjan, Rabin Magar and Durga Buda dedicated to \n");
+    printf("Our team is composed of Prajjwal Maharjan, Rabin Pulami Magar and Durga Budha dedicated to \n");
     printf("developing innovative solutions for our clients. Our lead developer, \n");
-    printf("Prajjwal Maharjan, brings expertise in software development and \n");
+    printf("Prajjwal Maharjan, has main role and brings expertise in software development and \n");
     printf("data security, ensuring that CipherPayroll is built to the highest \n");
     printf("standards of quality and security.\n\n");
     printf("Thank you for choosing CipherPayroll. We are committed to providing the \n");
