@@ -1,27 +1,27 @@
-#include <stdio.h>     // Standard input and output library
-#include <stdlib.h>    // Standard library for memory allocation, process control, conversions, etc.
-#include <string.h>    // String handling library
-#include <windows.h>   // Windows-specific API declarations
-#include <conio.h>     // Console input/output functions
-#include <stdbool.h>   // For Boolean Data type
+#include <stdio.h>     // Library for standard input and output
+#include <stdlib.h>    // Library for memory allocation, process control, conversions, and more
+#include <string.h>    // Library for string handling
+#include <windows.h>   // Declarations for Windows-specific API
+#include <conio.h>     // Functions for console input/output
+#include <stdbool.h>   // Boolean Data type
 
-// Define constants for user and employee management
-#define MAXUSERS 100                // Maximum number of users
-#define USERNAMELENGTH 50           // Maximum length of a username
-#define PASSWORDLENGTH 50           // Maximum length of a password
-#define UIDLENGTH 10                // Maximum length of a user ID
+// Constants for user and employee management
+#define MAXUSERS 100                // Users can't exceed this number
+#define USERNAMELENGTH 50           // Username can't be longer than this
+#define PASSWORDLENGTH 50           // Password can't be longer than this
+#define UIDLENGTH 10                // User ID can't be longer than this
 
-// Define file paths for storing user and employee data
-#define EMPLOYEE_FILE "Employees.bin" // Binary file for storing employee information
-#define FILENAME "Login.bin"          // Binary file for storing login information
+// File paths for user and employee data storage
+#define EMPLOYEE_FILE "Employees.bin" // Employee info goes in this binary file
+#define FILENAME "Login.bin"          // Login info goes in this binary file
 
-// Define color codes for console output
-#define RESET 7                     // Default console color
-#define RED FOREGROUND_RED          // Red color for error messages
-#define GREEN FOREGROUND_GREEN      // Green color for success messages
-#define YELLOW (FOREGROUND_RED | FOREGROUND_GREEN) // Yellow color for warning messages
-#define BLUE (FOREGROUND_BLUE)      // Blue color
-#define CYAN (FOREGROUND_GREEN | FOREGROUND_BLUE)  // Cyan color
+// Color codes for console output
+#define RESET 7                     // Console's default shade
+#define RED FOREGROUND_RED          // Red marks errors
+#define GREEN FOREGROUND_GREEN      // Green shows success
+#define YELLOW (FOREGROUND_RED | FOREGROUND_GREEN) // Yellow flags warnings
+#define BLUE (FOREGROUND_BLUE)      // Blue hue
+#define CYAN (FOREGROUND_GREEN | FOREGROUND_BLUE)  // Cyan tint
 
 // XOR key for encryption and decryption
 #define XOR_KEY 0xAA
@@ -36,40 +36,39 @@ struct User {
 
 // Define the Payroll structure
 struct Payroll {
-    double salary;                         // Basic salary
-    double allowances;                     // Allowances provided
-    double overtime;                       // Overtime payment
-    double bonuses;                        // Bonuses received
-    double tax_deduction;                  // Tax deductions
-    double pf_deduction;                   // Provident fund deductions
-    double insurance_premium;              // Insurance premium deductions
-    double net_salary;                     // Net salary after deductions
-    int year;                              // Year of the payroll
+    double salary;                         // Base pay
+    double allowances;                     // Extra perks
+    double overtime;                       // Extra hours compensation
+    double bonuses;                        // Additional rewards
+    double tax_deduction;                  // Money taken for taxes
+    double pf_deduction;                   // Cash set aside for retirement
+    double insurance_premium;              // Health coverage costs
+    double net_salary;                     // Take-home pay
+    int year;                              // Payroll year
 };
 
-// Define the Employee structure
+// Employee structure definition
 struct Employee {
-    char username[USERNAMELENGTH];         // Username of the employee
-    char password[PASSWORDLENGTH];         // Password of the employee
-    int uid;                               // User ID of the employee
-    struct Payroll payrolls[100];          // Payroll records for multiple years
-    int currentYear;                       // Tracks the current year of payroll processing
-    char status;                           // 'A' for Active, 'I' for Inactive, 'T' for Terminated
-    char position[USERNAMELENGTH];         // Position or title of the employee
-    unsigned long long int contact_no;     // Contact number of the employee
-    char email[100];                       // Email address of the employee
-    char gender[2];                        // Gender of the employee ('M' for Male, 'F' for Female, etc.)
-    char marital_status[2];                // Marital status ('M' for Married, 'S' for Single)
+    char username[USERNAMELENGTH];         // Employee's username
+    char password[PASSWORDLENGTH];         // Employee's password
+    int uid;                               // Employee's user ID
+    struct Payroll payrolls[100];          // Multiple years of payroll records
+    int currentYear;                       // Current payroll processing year
+    char status;                           // 'A' means Active, 'I' means Inactive, 'T' means Terminated
+    char position[USERNAMELENGTH];         // Employee's job title
+    unsigned long long int contact_no;     // Employee's phone number
+    char email[100];                       // Employee's email address
+    char gender[2];                        // Employee's gender ('M' for Male, 'F' for Female, etc.)
+    char marital_status[2];                // Employee's marital status ('M' for Married, 'S' for Single)
 };
 
-// Define global variables for user and employee management
-struct User *userList;                     // Pointer to the list of users
-int currentUserCount = 0;                  // Current number of users
-int latestUID = 1;                         // Starting point for user IDs
+// Global variables handle user and employee data
+struct User *userList;                     // Users live here
+int currentUserCount = 0;                  // How many users we've got
+int latestUID = 1;                         // User IDs kick off here
 
-struct Employee *employeeList;             // Pointer to the list of employees
-int currentEmployeeCount = 0;              // Current number of employees
-
+struct Employee *employeeList;             // Employees hang out in this list
+int currentEmployeeCount = 0;              // Our current employee headcount
 
 //Function Declaration
 // Sets the console text color
