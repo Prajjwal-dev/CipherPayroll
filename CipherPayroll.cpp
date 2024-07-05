@@ -1280,6 +1280,16 @@ void adminChangeAdminPassword() {
         getPasswordInput(newPassword);
         printf("\n");
 
+        // Check for spaces in the new password
+        if (strchr(newPassword, ' ') != NULL) {
+            setColor(RED);
+            printf("Error: Password cannot contain spaces!\n");
+            setColor(RESET);
+            printf("\nPress any key to continue...\n");
+            _getch();
+            return;
+        }
+
         // Prompt to re-enter new password
         setColor(CYAN);
         printf("Re-enter the new password: ");
@@ -1329,6 +1339,16 @@ void adminChangeAdminPassword() {
         setColor(RESET);
         getPasswordInput(newPassword);
         printf("\n");
+
+        // Check for spaces in the new password
+        if (strchr(newPassword, ' ') != NULL) {
+            setColor(RED);
+            printf("Error: Password cannot contain spaces!\n");
+            setColor(RESET);
+            printf("\nPress any key to continue...\n");
+            _getch();
+            return;
+        }
 
         // Prompt to re-enter new password
         setColor(CYAN);
