@@ -72,13 +72,13 @@ int currentEmployeeCount = 0;              // Our current employee headcount
 
 //Function Declaration
 // Sets the console text color
-void setColor(int color);
+void setColor(int);
 
 // Encrypts multiple files
 void encryptFiles();
 
 // Handles console signals for encryption on exit
-BOOL WINAPI ConsoleHandler(DWORD signal);
+BOOL WINAPI ConsoleHandler(DWORD);
 
 // Sets up the console handler for encryption on exit
 void setupConsoleHandler();
@@ -93,7 +93,7 @@ void displayLoading();
 void displayExiting();
 
 // Securely gets password input from the user
-void getPasswordInput(char *password);
+void getPasswordInput(char *);
 
 // Saves user data to file
 void saveUserData();
@@ -108,7 +108,7 @@ void saveEmployeeData();
 void loadEmployeeData();
 
 // Creates a unique user ID
-void createUID(int* uid);
+void createUID(int*);
 
 // Prompts the user to continue or exit
 bool continuePrompt();
@@ -126,22 +126,22 @@ void updatePassword();
 void resetUserPassword();
 
 // Views personal information of an employee
-void viewPersonalInformation(int uid);
+void viewPersonalInformation(int);
 
 // Views the payslip of an employee
-void viewPaySlip(int uid);
+void viewPaySlip(int);
 
 //Views the Audit log of Client
-void viewClientAuditLog(int uid);
+void viewClientAuditLog(int);
 
 // Displays the client menu
-void clientMenu(int uid);
+void clientMenu(int);
 
 // Authenticates the user
 int authenticateUser();
 
 // Checks approval notice for a user
-void checkApprovalNotice(int uid);
+void checkApprovalNotice(int);
 
 // Displays employee status notice
 void employeeStatusNotice();
@@ -150,10 +150,10 @@ void employeeStatusNotice();
 void mainClientMenu();
 
 // Saves the admin password to file
-void saveAdminPassword(const char* password);
+void saveAdminPassword(const char*);
 
 // Loads the admin password from file
-int loadAdminPassword(char* password, int maxLength);
+int loadAdminPassword(char* , int);
 
 // Checks if the initial admin password is set
 bool isInitialAdminPasswordSet();
@@ -162,13 +162,13 @@ bool isInitialAdminPasswordSet();
 void saveInitialAdminPassword();
 
 // Validates the admin password
-int validateAdminPassword(const char* password);
+int validateAdminPassword(const char*);
 
 // Changes the admin password
 void adminChangeAdminPassword();
 
 // Checks the user approval status
-int checkUserApprovalStatus(int uid, char* password);
+int checkUserApprovalStatus(int, char*);
 
 // Approves a new employee
 void adminApproveNewEmployee();
@@ -216,10 +216,10 @@ void viewAllEmployeeAuditLog();
 void searchEmployeeAuditLog();
 
 // Encrypts a file using XOR encryption
-void encryptFile(const char *filename);
+void encryptFile(const char *);
 
 // Decrypts a file using XOR encryption
-void decryptFile(const char *filename);
+void decryptFile(const char *);
 
 // Manages employee information in the admin menu
 void adminEmployeeInfoManagement();
