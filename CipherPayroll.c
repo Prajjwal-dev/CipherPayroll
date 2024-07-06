@@ -4,12 +4,12 @@
 #include <windows.h>   // Declarations for Windows-specific API
 #include <conio.h>     // Functions for console input/output
 #include <stdbool.h>   // Boolean Data type
+#include <ctype.h>	   // For its function such as ispunct and isdigit
 
 // Constants for user and employee management
 #define MAXUSERS 100                // Users can't exceed this number
 #define USERNAMELENGTH 50           // Username can't be longer than this
 #define PASSWORDLENGTH 50           // Password can't be longer than this
-#define UIDLENGTH 10                // User ID can't be longer than this
 
 // File paths for user and employee data storage
 #define EMPLOYEE_FILE "Employees.bin" // Employee info goes in this binary file
@@ -241,7 +241,6 @@ int main() {
     setupConsoleHandler();
     atexit(encryptFiles);
 
-	// Use of DMA(Dynamic Memory Allocation)
     // Allocate memory for user and employee lists
     userList = (struct User*)malloc(MAXUSERS * sizeof(struct User));
     employeeList = (struct Employee*)malloc(MAXUSERS * sizeof(struct Employee));
@@ -312,11 +311,12 @@ void setupConsoleHandler() {
     }
 }
 
-// Displays a loading animation
+//Displays a Loading Animation
 void displayLoading() {
     setColor(YELLOW);
     printf("Loading");
-    for (int i = 0; i < 3; i++) {
+    int i;
+    for (i = 0; i < 3; i++) {
         setColor(YELLOW);
         printf(".");
         fflush(stdout);
@@ -329,9 +329,10 @@ void displayLoading() {
 // Displays an exiting animation
 void displayExiting() {
     clearScreen();
+    int i = 0;
     setColor(RED);
     printf("Exiting");
-    for (int i = 0; i < 3; i++) {
+    for (i = 0; i < 3; i++) {
         setColor(RED);
         printf(".");
         fflush(stdout);
@@ -482,10 +483,11 @@ void registerUser() {
             setColor(RESET);
             continue;
         }
-
+        
+		int i = 0;
         bool hasSpecialChar = false;
         bool hasDigit = false;
-        for (int i = 0; i < strlen(newUser.password); i++) {
+        for (i = 0; i < strlen(newUser.password); i++) {
             if (ispunct(newUser.password[i])) {
                 hasSpecialChar = true;
             }
@@ -522,9 +524,9 @@ void updatePersonalDetails() {
     printf("Enter your UID: ");
     setColor(RESET);
     scanf("%d", &uid);
-
+	int i = 0;
     // Find the employee by UID
-    for (int i = 0; i < currentEmployeeCount; i++) {
+    for (i = 0; i < currentEmployeeCount; i++) {
         if (employeeList[i].uid == uid) {
             employee = &employeeList[i];
             break;
@@ -619,8 +621,9 @@ void updatePassword() {
     setColor(RESET);
     getPasswordInput(oldPassword);
     printf("\n");
+	int i = 0;
 
-    for (int i = 0; i < currentEmployeeCount; i++) {
+    for (i = 0; i < currentEmployeeCount; i++) {
         if (employeeList[i].uid == uid && strcmp(employeeList[i].password, oldPassword) == 0) {
             if (employeeList[i].status != 'A') {
                 setColor(RED);
@@ -671,8 +674,9 @@ void resetUserPassword() {
     printf("Enter your UID: ");
     setColor(RESET);
     scanf("%d", &uid);
-
-    for (int i = 0; i < currentEmployeeCount; i++) {
+	int i = 0;
+	
+    for (i = 0; i < currentEmployeeCount; i++) {
         if (employeeList[i].uid == uid) {
             setColor(CYAN);
             printf("Enter a new password: ");
@@ -711,8 +715,9 @@ void resetUserPassword() {
 // Views personal information of an employee
 void viewPersonalInformation(int uid) {
     struct Employee *employee = NULL;
+	int i = 0;
 
-    for (int i = 0; i < currentEmployeeCount; i++) {
+    for (i = 0; i < currentEmployeeCount; i++) {
         if (employeeList[i].uid == uid) {
             employee = &employeeList[i];
             break;
@@ -745,9 +750,10 @@ void viewPersonalInformation(int uid) {
 // Views the payslip of an employee
 void viewPaySlip(int uid) {
     struct Employee *employee = NULL;
+	int i = 0;
 
     // Find the employee by UID
-    for (int i = 0; i < currentEmployeeCount; i++) {
+    for (i = 0; i < currentEmployeeCount; i++) {
         if (employeeList[i].uid == uid) {
             employee = &employeeList[i];
             break;
@@ -792,8 +798,9 @@ void viewPaySlip(int uid) {
 //Views the Audit log of Client
 void viewClientAuditLog(int uid) {
     struct Employee *employee = NULL;
+	int i = 0;
 
-    for (int i = 0; i < currentEmployeeCount; i++) {
+    for (i = 0; i < currentEmployeeCount; i++) {
         if (employeeList[i].uid == uid) {
             employee = &employeeList[i];
             break;
@@ -811,8 +818,9 @@ void viewClientAuditLog(int uid) {
     setColor(GREEN);
     printf("\n======================= AUDIT LOG FOR %s =======================\n", employee->username);
     setColor(RESET);
+	int year = 0;
 
-    for (int year = 1; year <= employee->currentYear; year++) {
+    for (year = 1; year <= employee->currentYear; year++) {
         struct Payroll *payroll = &employee->payrolls[year];
         double annual_salary = payroll->net_salary * 12;
 
@@ -842,9 +850,10 @@ void clientMenu(int uid) {
     int option;
     char check;
     bool maritalStatusSet = false;
+	int i = 0;
 
     // Update marital status if necessary
-    for (int i = 0; i < currentEmployeeCount; i++) {
+    for (i = 0; i < currentEmployeeCount; i++) {
         if (employeeList[i].uid == uid && employeeList[i].marital_status[0] != '\0') {
             maritalStatusSet = true;
             break;
@@ -860,7 +869,8 @@ void clientMenu(int uid) {
 
         // Show UID and username after successful login
         struct Employee *loggedInEmployee = NULL;
-        for (int i = 0; i < currentEmployeeCount; i++) {
+        int i = 0;
+        for (i = 0; i < currentEmployeeCount; i++) {
             if (employeeList[i].uid == uid) {
                 loggedInEmployee = &employeeList[i];
                 break;
@@ -982,7 +992,8 @@ int authenticateUser() {
     getPasswordInput(password);  // Get password input securely
     printf("\n");
 
-    for (int i = 0; i < currentEmployeeCount; i++) {
+	int i = 0;
+    for (i = 0; i < currentEmployeeCount; i++) {
         if (employeeList[i].uid == uid && strcmp(employeeList[i].password, password) == 0) {
             if (employeeList[i].status == 'A') {
                 setColor(GREEN);
@@ -1054,7 +1065,8 @@ void employeeStatusNotice() {
 
     struct Employee *employee = NULL;
 
-    for (int i = 0; i < currentEmployeeCount; i++) {
+	int i = 0;
+    for (i = 0; i < currentEmployeeCount; i++) {
         if (employeeList[i].uid == uid && strcmp(employeeList[i].password, password) == 0) {
             employee = &employeeList[i];
             break;
@@ -1293,7 +1305,8 @@ void adminChangeAdminPassword() {
         // Check for strong password criteria
         bool hasSpecialChar = false;
         bool hasDigit = false;
-        for (int i = 0; i < strlen(newPassword); i++) {
+        int i = 0;
+        for (i = 0; i < strlen(newPassword); i++) {
             if (ispunct(newPassword[i])) {
                 hasSpecialChar = true;
             }
@@ -1374,7 +1387,8 @@ void adminChangeAdminPassword() {
         // Check for strong password criteria
         bool hasSpecialChar = false;
         bool hasDigit = false;
-        for (int i = 0; i < strlen(newPassword); i++) {
+        int i = 0;
+        for (i = 0; i < strlen(newPassword); i++) {
             if (ispunct(newPassword[i])) {
                 hasSpecialChar = true;
             }
@@ -1425,7 +1439,8 @@ void adminChangeAdminPassword() {
 
 // Check user approval status
 int checkUserApprovalStatus(int uid, char* password) {
-    for (int i = 0; i < currentUserCount; i++) {
+	int i = 0;
+    for (i = 0; i < currentUserCount; i++) {
         if (userList[i].uid == uid && strcmp(userList[i].password, password) == 0) {
             return userList[i].status == 'A'; // Return 1 if approved, 0 otherwise
         }
@@ -1438,8 +1453,9 @@ void adminApproveNewEmployee() {
     setColor(BLUE);
     printf("\nApproval for New Employee\n=========================\n");
     setColor(RESET);
+	int i = 0;
 
-    for (int i = 0; i < currentUserCount; i++) {
+    for (i = 0; i < currentUserCount; i++) {
         if (userList[i].status == 'P') {
             printf("UID: %d, Username: %s\n", userList[i].uid, userList[i].username);
         }
@@ -1451,7 +1467,7 @@ void adminApproveNewEmployee() {
     setColor(RESET);
     scanf("%d", &uid);
 
-    for (int i = 0; i < currentUserCount; i++) {
+    for (i = 0; i < currentUserCount; i++) {
         if (userList[i].uid == uid && userList[i].status == 'P') {
             userList[i].status = 'A'; // Set status to Approved
 
@@ -1502,8 +1518,9 @@ void adminEditEmployeeDetails() {
         setColor(RESET);
         return;
     }
+    int i = 0, j = 0;
 
-    for (int i = 0; i < currentEmployeeCount; i++) {
+    for (i = 0; i < currentEmployeeCount; i++) {
         if (employeeList[i].uid == uid) {
             while (1) {
                 setColor(CYAN);
@@ -1555,7 +1572,7 @@ void adminEditEmployeeDetails() {
 
                         // Check if there is already a chairman
                         if (strcmp(employeeList[i].position, "chairman") == 0) {
-                            for (int j = 0; j < currentEmployeeCount; j++) {
+                            for (j = 0; j < currentEmployeeCount; j++) {
                                 if (j != i && strcmp(employeeList[j].position, "chairman") == 0) {
                                     setColor(RED);
                                     printf("Error: There can only be one chairman in the company!\n");
@@ -1657,10 +1674,11 @@ void adminDeleteEmployeeRecord() {
     printf("Enter UID of the employee to delete: ");
     setColor(RESET);
     scanf("%d", &uid);
+    int i = 0, j = 0;
 
-    for (int i = 0; i < currentEmployeeCount; i++) {
+    for (i = 0; i < currentEmployeeCount; i++) {
         if (employeeList[i].uid == uid) {
-            for (int j = i; j < currentEmployeeCount - 1; j++) {
+            for (j = i; j < currentEmployeeCount - 1; j++) {
                 employeeList[j] = employeeList[j + 1];
             }
             currentEmployeeCount--;
@@ -1691,8 +1709,9 @@ void adminSearchEmployeeRecord() {
     printf("Enter UID of the employee to search: ");
     setColor(RESET);
     scanf("%d", &uid);
+    int i = 0;
 
-    for (int i = 0; i < currentEmployeeCount; i++) {
+    for (i = 0; i < currentEmployeeCount; i++) {
         if (employeeList[i].uid == uid) {
             struct Employee *employee = &employeeList[i];
 
@@ -1707,8 +1726,9 @@ void adminSearchEmployeeRecord() {
             printf("| %-25s | %s\n", "Position", employee->position);
             printf("| %-25s | %llu\n", "Contact No", employee->contact_no);
             printf("| %-25s | %s\n", "Email", employee->email);
+			int year = 1;
 
-            for (int year = 1; year <= employee->currentYear; year++) {
+            for (year = 1; year <= employee->currentYear; year++) {
                 struct Payroll *payroll = &employee->payrolls[year];
                 double annual_salary = payroll->net_salary * 12;
 
@@ -1752,8 +1772,9 @@ void adminChangeEmployeeStatus() {
     printf("Enter UID of employee: ");
     setColor(RESET);
     scanf("%d", &uid);
+	int i = 0;
 
-    for (int i = 0; i < currentEmployeeCount; i++) {
+    for (i = 0; i < currentEmployeeCount; i++) {
         if (employeeList[i].uid == uid) {
             setColor(CYAN);
             printf("Enter new status (A for Active, I for Inactive, T for Terminated): ");
@@ -1789,8 +1810,9 @@ void adminViewAllEmployeeDetails() {
     setColor(BLUE);
     printf("\n========================= ALL EMPLOYEE DETAILS ========================\n");
     setColor(RESET);
+	int i = 0;
 
-    for (int i = 0; i < currentEmployeeCount; i++) {
+    for (i = 0; i < currentEmployeeCount; i++) {
         struct Employee *employee = &employeeList[i];
 
         printf("\nEmployee: %s (UID: %d)\n", employee->username, employee->uid);
@@ -1870,9 +1892,10 @@ void updateNewPayrollProcessing() {
     
     printf("Enter UID of the employee: ");
     scanf("%d", &uid);
+	int i = 0;
 
     // Check if the employee's marital status is recorded
-    for (int i = 0; i < currentEmployeeCount; i++) {
+    for (i = 0; i < currentEmployeeCount; i++) {
         if (employeeList[i].uid == uid && strcmp(employeeList[i].marital_status, "") == 0) {
             setColor(RED);
             printf("Error: Employee must update their marital status first.\n");
@@ -1881,7 +1904,7 @@ void updateNewPayrollProcessing() {
         }
     }
 
-    for (int i = 0; i < currentEmployeeCount; i++) {
+    for (i = 0; i < currentEmployeeCount; i++) {
         if (employeeList[i].uid == uid) {
             setColor(CYAN);
             printf("Enter new monthly salary: ");
@@ -1954,8 +1977,9 @@ void modifyPayrollEntry() {
     
     printf("Enter UID of the employee: ");
     scanf("%d", &uid);
+	int i = 0;
 
-    for (int i = 0; i < currentEmployeeCount; i++) {
+    for (i = 0; i < currentEmployeeCount; i++) {
         if (employeeList[i].uid == uid) {
             int year = employeeList[i].currentYear;
             struct Payroll *payroll = &employeeList[i].payrolls[year];
@@ -2023,8 +2047,9 @@ void viewAllEmployeePayrollSummary() {
     setColor(CYAN);
     printf("\n====================== ALL EMPLOYEE PAYROLL SUMMARY ======================\n");
     setColor(RESET);
+	int i = 0;
 
-    for (int i = 0; i < currentEmployeeCount; i++) {
+    for (i = 0; i < currentEmployeeCount; i++) {
         struct Employee *employee = &employeeList[i];
         int year = employee->currentYear;
         struct Payroll *payroll = &employee->payrolls[year];
@@ -2065,8 +2090,9 @@ void searchEmployeePayrollSummary() {
     printf("Enter UID of the employee: ");
     scanf("%d", &uid);
     setColor(RESET);
+    int i = 0;
     
-    for (int i = 0; i < currentEmployeeCount; i++) {
+    for (i = 0; i < currentEmployeeCount; i++) {
         if (employeeList[i].uid == uid) {
             struct Employee *employee = &employeeList[i];
             int year = employee->currentYear;
@@ -2168,14 +2194,16 @@ void viewAllEmployeeAuditLog() {
     setColor(CYAN);
     printf("\n==================== AUDIT LOG FOR ALL EMPLOYEES =====================\n");
     setColor(RESET);
+    int i = 0;
 
-    for (int i = 0; i < currentEmployeeCount; i++) {
+    for (i = 0; i < currentEmployeeCount; i++) {
         struct Employee *employee = &employeeList[i];
 
         printf("\nAudit Log for %s\n", employee->username);
         printf("---------------------------------------------------------------------\n");
+		int year = 0;
 
-        for (int year = 1; year <= employee->currentYear; year++) {
+        for (year = 1; year <= employee->currentYear; year++) {
             struct Payroll *payroll = &employee->payrolls[year];
             double annual_salary = payroll->net_salary * 12;
 
@@ -2213,15 +2241,17 @@ void searchEmployeeAuditLog() {
     printf("Enter UID of the employee to search: ");
     setColor(RESET);
     scanf("%d", &uid);
+	int i = 0;
 
-    for (int i = 0; i < currentEmployeeCount; i++) {
+    for (i = 0; i < currentEmployeeCount; i++) {
         if (employeeList[i].uid == uid) {
             struct Employee *employee = &employeeList[i];
 
             printf("\nAudit Log for %s\n", employee->username);
             printf("---------------------------------------------------------------------\n");
+			int year = 0;
 
-            for (int year = 1; year <= employee->currentYear; year++) {
+            for (year = 1; year <= employee->currentYear; year++) {
                 struct Payroll *payroll = &employee->payrolls[year];
                 double annual_salary = payroll->net_salary * 12;
 
@@ -2272,8 +2302,9 @@ void encryptFile(const char* filename) {
 
     fread(buffer, 1, fileSize, file);
     fseek(file, 0, SEEK_SET);
+	long i = 0;
 
-    for (long i = 0; i < fileSize; i++) {
+    for (i = 0; i < fileSize; i++) {
         buffer[i] ^= XOR_KEY;
     }
 
@@ -2301,8 +2332,9 @@ void decryptFile(const char* filename) {
 
     fread(buffer, 1, fileSize, file);
     fseek(file, 0, SEEK_SET);
+	long i = 0;
 
-    for (long i = 0; i < fileSize; i++) {
+    for (i = 0; i < fileSize; i++) {
         buffer[i] ^= XOR_KEY;
     }
 
