@@ -117,7 +117,7 @@ bool continuePrompt();
 void registerUser();
 
 // Updates personal details of an employee
-void updatePersonalDetails();
+bool updatePersonalDetails();
 
 // Updates the password of an employee
 void updatePassword();
@@ -139,6 +139,9 @@ void clientMenu(int);
 
 // Authenticates the user
 int authenticateUser();
+
+// Checks the user approval status
+int checkUserApprovalStatus(int, char*);
 
 // Checks approval notice for a user
 void checkApprovalNotice(int);
@@ -166,9 +169,6 @@ int validateAdminPassword(const char*);
 
 // Changes the admin password
 void adminChangeAdminPassword();
-
-// Checks the user approval status
-int checkUserApprovalStatus(int, char*);
 
 // Approves a new employee
 void adminApproveNewEmployee();
@@ -515,17 +515,12 @@ void registerUser() {
 }
 
 // Updates personal details of an employee
-void updatePersonalDetails() {
-    int uid;
+bool updatePersonalDetails(int uid) {
     struct Employee *employee = NULL;
+    bool maritalStatusUpdated = false;
 
-    // Prompt for UID
-    setColor(CYAN);
-    printf("Enter your UID: ");
-    setColor(RESET);
-    scanf("%d", &uid);
-	int i = 0;
     // Find the employee by UID
+    int i = 0;
     for (i = 0; i < currentEmployeeCount; i++) {
         if (employeeList[i].uid == uid) {
             employee = &employeeList[i];
@@ -537,7 +532,7 @@ void updatePersonalDetails() {
         setColor(RED);
         printf("Error: Invalid UID!\n");
         setColor(RESET);
-        return;
+        return false;
     }
 
     // Prompt for and read contact number
@@ -558,7 +553,7 @@ void updatePersonalDetails() {
         setColor(RED);
         printf("Error: Contact number must have exactly 10 digits!\n");
         setColor(RESET);
-        return;
+        return false;
     }
 
     // Prompt for and read email address
@@ -572,7 +567,7 @@ void updatePersonalDetails() {
         setColor(RED);
         printf("Error: Invalid email format!\n");
         setColor(RESET);
-        return;
+        return false;
     }
 
     // Prompt for and read gender
@@ -585,26 +580,35 @@ void updatePersonalDetails() {
         setColor(RED);
         printf("Error: Invalid gender input!\n");
         setColor(RESET);
-        return;
+        return false;
     }
 
     // Prompt for and read marital status
+    char newMaritalStatus[2];
     setColor(CYAN);
     printf("Enter marital status (M/S): ");
     setColor(RESET);
-    scanf("%1s", employee->marital_status);
+    scanf("%1s", newMaritalStatus);
 
-    if (strcmp(employee->marital_status, "M") != 0 && strcmp(employee->marital_status, "S") != 0) {
+    if (strcmp(newMaritalStatus, "M") != 0 && strcmp(newMaritalStatus, "S") != 0) {
         setColor(RED);
         printf("Error: Invalid marital status input!\n");
         setColor(RESET);
-        return;
+        return false;
+    }
+
+    // Check if marital status was updated
+    if (strcmp(employee->marital_status, newMaritalStatus) != 0) {
+        strcpy(employee->marital_status, newMaritalStatus);
+        maritalStatusUpdated = true;
     }
 
     saveEmployeeData();
     setColor(GREEN);
     printf("Personal details updated successfully!\n");
     setColor(RESET);
+
+    return maritalStatusUpdated;
 }
 
 // Updates the password of an employee
@@ -850,7 +854,7 @@ void clientMenu(int uid) {
     int option;
     char check;
     bool maritalStatusSet = false;
-	int i = 0;
+    int i = 0;
 
     // Update marital status if necessary
     for (i = 0; i < currentEmployeeCount; i++) {
@@ -918,8 +922,9 @@ void clientMenu(int uid) {
                         viewPersonalInformation(uid);
                         break;
                     case 2:
-                        updatePersonalDetails();
-                        maritalStatusSet = true; // Update the status after changing
+                        if (updatePersonalDetails(uid)) {
+                            maritalStatusSet = true; // Update the status after changing
+                        }
                         break;
                     case 3:
                         break;
@@ -977,6 +982,7 @@ void clientMenu(int uid) {
     }
 }
 
+
 // Authenticates the user
 int authenticateUser() {
     int uid;
@@ -1017,6 +1023,17 @@ int authenticateUser() {
     printf("Note: Be sure to Check if Your account is active through Cheeck Approval Notice from Client Menu\n");
     setColor(RESET);
     return 0;
+}
+
+// Check user approval status
+int checkUserApprovalStatus(int uid, char* password) {
+	int i = 0;
+    for (i = 0; i < currentUserCount; i++) {
+        if (userList[i].uid == uid && strcmp(userList[i].password, password) == 0) {
+            return userList[i].status == 'A'; // Return 1 if approved, 0 otherwise
+        }
+    }
+    return -1; // User not found
 }
 
 // Checks approval notice for a user
@@ -1437,17 +1454,6 @@ void adminChangeAdminPassword() {
     mainMenu();
 }
 
-// Check user approval status
-int checkUserApprovalStatus(int uid, char* password) {
-	int i = 0;
-    for (i = 0; i < currentUserCount; i++) {
-        if (userList[i].uid == uid && strcmp(userList[i].password, password) == 0) {
-            return userList[i].status == 'A'; // Return 1 if approved, 0 otherwise
-        }
-    }
-    return -1; // User not found
-}
-
 // Approves a new employee
 void adminApproveNewEmployee() {
     setColor(BLUE);
@@ -1726,31 +1732,7 @@ void adminSearchEmployeeRecord() {
             printf("| %-25s | %s\n", "Position", employee->position);
             printf("| %-25s | %llu\n", "Contact No", employee->contact_no);
             printf("| %-25s | %s\n", "Email", employee->email);
-			int year = 1;
-
-            for (year = 1; year <= employee->currentYear; year++) {
-                struct Payroll *payroll = &employee->payrolls[year];
-                double annual_salary = payroll->net_salary * 12;
-
-                printf("\nPayroll for Year %d\n", year);
-                printf("---------------------------------------------------------------------\n");
-                printf("| %-25s | %20s |\n", "Description", "Amount (NRs)");
-                printf("---------------------------------------------------------------------\n");
-                printf("| %-25s | %20.2f |\n", "Basic Salary", payroll->salary);
-                printf("| %-25s | %20.2f |\n", "Allowances", payroll->allowances);
-                printf("| %-25s | %20.2f |\n", "Overtime", payroll->overtime);
-                printf("| %-25s | %20.2f |\n", "Bonuses", payroll->bonuses);
-                printf("---------------------------------------------------------------------\n");
-                printf("| %-25s | %20.2f |\n", "Tax Deduction", payroll->tax_deduction);
-                printf("| %-25s | %20.2f |\n", "Provident Fund", payroll->pf_deduction);
-                printf("| %-25s | %20.2f |\n", "Insurance Premium", payroll->insurance_premium);
-                printf("---------------------------------------------------------------------\n");
-                setColor(CYAN);
-                printf("| %-25s | %20.2f |\n", "Net Salary (Monthly)", payroll->net_salary);
-                printf("| %-25s | %20.2f |\n", "Annual Salary", annual_salary);
-                setColor(RESET);
-                printf("=====================================================================\n");
-            }
+			printf("=====================================================================\n");
             return;
         }
     }
