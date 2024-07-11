@@ -982,7 +982,6 @@ void clientMenu(int uid) {
     }
 }
 
-
 // Authenticates the user
 int authenticateUser() {
     int uid;
